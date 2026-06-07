@@ -72,17 +72,20 @@ h1.logo span{color:#fff;text-shadow:4px 4px 0 var(--ink),8px 8px 0 rgba(0,0,0,.2
 .miniNote{font-size:11px;opacity:.75}
 
 /* ---------- Game screen layout ---------- */
-#scrGame{padding:0}
-#topBar{width:100%;display:flex;justify-content:space-between;align-items:center;padding:6px 8px;gap:6px;z-index:30}
-#scoreBox{background:var(--paper);border:3px solid var(--ink);border-radius:12px;padding:4px 10px;
-  font-size:13px;font-weight:bold;box-shadow:3px 3px 0 rgba(0,0,0,.3);display:flex;gap:10px;align-items:center}
-.scTeam{display:flex;flex-direction:column;align-items:center;line-height:1.1}
-.scTeam .pts{font-size:18px}
-.cames{font-size:11px;letter-spacing:2px}
-#btnMusic,#btnHelp{width:42px;height:42px;font-size:20px;background:var(--paper);border-radius:50%;padding:0}
-#msgLine{min-height:22px;font-size:13px;font-weight:bold;background:rgba(255,255,245,.92);border:3px solid var(--ink);
-  border-radius:20px;padding:3px 14px;max-width:94vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  box-shadow:3px 3px 0 rgba(0,0,0,.3);z-index:30}
+#scrGame{padding-top:calc(env(safe-area-inset-top,0px) + 6px)}
+/* barra superior compacta i abaixada: que es dits hi arribin bé */
+#topBar{width:100%;display:flex;justify-content:space-between;align-items:center;
+  padding:2px 8px;gap:6px;z-index:50}
+#scoreBox{background:var(--paper);border:3px solid var(--ink);border-radius:10px;padding:2px 8px;
+  font-size:11px;font-weight:bold;box-shadow:2px 2px 0 rgba(0,0,0,.3);display:flex;gap:8px;align-items:center}
+.scTeam{display:flex;flex-direction:column;align-items:center;line-height:1.05}
+.scTeam .pts{font-size:15px}
+.cames{font-size:10px;letter-spacing:1px}
+#btnMusic,#btnHelp{width:44px;height:44px;font-size:19px;background:var(--paper);border-radius:50%;padding:0;
+  border-width:3px}
+#msgLine{min-height:20px;font-size:12px;font-weight:bold;background:rgba(255,255,245,.92);border:3px solid var(--ink);
+  border-radius:20px;padding:2px 12px;max-width:94vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  box-shadow:2px 2px 0 rgba(0,0,0,.3);z-index:30;margin-top:2px}
 
 #tableArea{position:relative;flex:1;width:100%}
 /* contenidor de proporció fixa: tot queda al seu lloc a qualsevol pantalla */
