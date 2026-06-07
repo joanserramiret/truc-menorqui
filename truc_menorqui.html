@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#b5483a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TRUC">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>TRUC! — Joc menorquí</title>
+<style>
+/* ============ TRUC MENORQUÍ — prototip estil còmic ============ */
+:root{
+  --ink:#22201a;          /* tinta */
+  --paper:#f6eed9;        /* papel de diari */
+  --paper2:#efe3c4;
+  --wood:#a08050;         /* fusta aiguada sèpia */
+  --wood2:#7c5f38;
+  --red:#b5483a;          /* vermell apagat de tinta */
+  --gold2:#e3b341;
+  --wash:#d8d2c0;         /* gris aiguada */
+  --bubble:#fbf6e8;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:'Chalkboard SE','Comic Sans MS','Segoe Print',cursive,sans-serif;
+  /* paper d'es diari amb una mica de gra */
+  background:
+    repeating-linear-gradient(0deg, rgba(34,32,26,.022) 0 2px, transparent 2px 5px),
+    radial-gradient(circle at 50% 18%, #faf4e2 0%, var(--paper) 50%, #e2d4ae 100%);
+  color:var(--ink);
+}
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow:hidden}
+.hidden{display:none!important}
+
+/* ---------- Comic basics ---------- */
+.comic-border{border:4px solid var(--ink);border-radius:14px;box-shadow:4px 4px 0 rgba(0,0,0,.45)}
+button{
+  font-family:inherit;font-weight:bold;border:4px solid var(--ink);border-radius:14px;
+  box-shadow:0 5px 0 rgba(0,0,0,.4);cursor:pointer;color:var(--ink);
+}
+button:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.4)}
+
+/* ---------- Config screen ---------- */
+#scrConfig{justify-content:center;gap:14px;padding:16px;text-align:center;
+  background:
+    repeating-linear-gradient(0deg, rgba(34,32,26,.025) 0 2px, transparent 2px 5px),
+    radial-gradient(circle at 50% 15%, #faf4e2 0%, var(--paper) 45%, #ddcca2 100%)}
+#titleWrap{position:relative}
+h1.logo{
+  font-size:min(21vw,110px);letter-spacing:2px;color:var(--red);
+  text-shadow:4px 4px 0 var(--ink), 8px 8px 0 rgba(0,0,0,.25);
+  transform:rotate(-4deg);
+}
+h1.logo span{color:#fff;text-shadow:4px 4px 0 var(--ink),8px 8px 0 rgba(0,0,0,.25)}
+.subtitle{font-size:16px;background:var(--bubble);display:inline-block;padding:6px 14px;border:3px solid var(--ink);
+  border-radius:30px;transform:rotate(2deg);box-shadow:3px 3px 0 rgba(0,0,0,.3)}
+.cfgCard{background:var(--paper);padding:14px 18px;width:min(92vw,380px);display:flex;flex-direction:column;gap:12px}
+.cfgRow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.cfgRow .lbl{font-weight:bold;text-align:left;font-size:15px}
+.seg{display:flex;border:3px solid var(--ink);border-radius:12px;overflow:hidden;background:#fff}
+.seg button{border:none;border-radius:0;box-shadow:none;padding:8px 14px;font-size:14px;background:#fff}
+.seg button.on{background:var(--red);color:#fff}
+.bigStart{font-size:24px;padding:14px 30px;background:var(--red);color:#fff;transform:rotate(-1deg)}
+.miniNote{font-size:11px;opacity:.75}
+
+/* ---------- Game screen layout ---------- */
+#scrGame{padding:0}
+#topBar{width:100%;display:flex;justify-content:space-between;align-items:center;padding:6px 8px;gap:6px;z-index:30}
+#scoreBox{background:var(--paper);border:3px solid var(--ink);border-radius:12px;padding:4px 10px;
+  font-size:13px;font-weight:bold;box-shadow:3px 3px 0 rgba(0,0,0,.3);display:flex;gap:10px;align-items:center}
+.scTeam{display:flex;flex-direction:column;align-items:center;line-height:1.1}
+.scTeam .pts{font-size:18px}
+.cames{font-size:11px;letter-spacing:2px}
+#btnMusic,#btnHelp{width:42px;height:42px;font-size:20px;background:var(--paper);border-radius:50%;padding:0}
+#msgLine{min-height:22px;font-size:13px;font-weight:bold;background:rgba(255,255,245,.92);border:3px solid var(--ink);
+  border-radius:20px;padding:3px 14px;max-width:94vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  box-shadow:3px 3px 0 rgba(0,0,0,.3);z-index:30}
+
+#tableArea{position:relative;flex:1;width:100%}
+/* contenidor de proporció fixa: tot queda al seu lloc a qualsevol pantalla */
+#tableInner{position:absolute;inset:0;margin:auto;aspect-ratio:0.92;
+  max-width:520px;max-height:100%;width:100%}
+
+/* the wooden table */
+#mesa{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:92%;aspect-ratio:1.15;border-radius:50%;
+  background:
+   repeating-linear-gradient(95deg, rgba(34,32,26,.10) 0 2px, transparent 2px 14px),
+   repeating-linear-gradient(92deg, rgba(34,32,26,.05) 0 12px, rgba(255,255,255,.06) 12px 26px),
+   radial-gradient(circle at 45% 35%, #b6945f 0%, var(--wood) 55%, var(--wood2) 100%);
+  border:5px solid var(--ink);box-shadow:0 12px 0 rgba(34,32,26,.3), inset 0 -10px 0 rgba(34,32,26,.16);
+}
+/* played cards slots on the table */
+.slot{position:absolute;width:72px;height:108px;transform:translate(-50%,-50%);z-index:12}
+#slot0{left:50%;top:74%}
+#slot1{left:72%;top:48%}
+#slot2{left:50%;top:30%}
+#slot3{left:28%;top:48%}
+
+/* mazo de cartes sobrants: es posa a la dreta del qui reparteix */
+#mazo{position:absolute;width:46px;height:69px;transform:translate(-50%,-50%);z-index:8}
+#mazo .card{width:46px;height:69px;position:absolute;left:0;top:0}
+#mazo .card:nth-child(2){transform:translate(3px,-2px) rotate(5deg)}
+#mazo .card:nth-child(3){transform:translate(-3px,2px) rotate(-4deg)}
+#mazo .card.back:after{font-size:16px}
+.slot .card{position:absolute;inset:0}
+
+/* ---------- Players (ben grossos!) ---------- */
+.player{position:absolute;display:flex;flex-direction:column;align-items:center;z-index:10;width:124px}
+.player .avatar{width:110px;height:110px;filter:drop-shadow(3px 4px 0 rgba(34,32,26,.3))}
+.player .pname{font-size:13px;font-weight:bold;background:var(--paper);border:3px solid var(--ink);
+  border-radius:10px;padding:1px 10px;margin-top:-10px;box-shadow:2px 2px 0 rgba(34,32,26,.3);
+  position:relative;z-index:6} /* es nom sempre per damunt des monigot */
+.player.turn .pname{background:var(--gold2)}
+.player .ncards{font-size:11px;margin-top:2px;letter-spacing:1px}
+#pl1{right:-2%;top:22%}
+#pl2{left:50%;top:-2%;transform:translateX(-50%)}
+#pl3{left:-2%;top:22%}
+
+/* speech bubble */
+.bubble{position:absolute;background:var(--bubble);border:3px solid var(--ink);
+  border-radius:55% 45% 60% 40% / 60% 55% 45% 50%; /* bafarada irregular, a mà */
+  padding:10px 18px;font-size:19px;font-weight:bold;z-index:40;box-shadow:3px 3px 0 rgba(34,32,26,.3);
+  white-space:nowrap;text-transform:uppercase;letter-spacing:.5px;
+  transform:translate(-50%,-100%);animation:pop .18s ease-out}
+.bubble:after{content:'';position:absolute;bottom:-14px;left:24px;border:8px solid transparent;border-top-color:var(--ink)}
+.bubble.shout{font-size:23px;color:var(--ink);
+  border-width:4px;border-radius:18px 60% 20px 55% / 55% 22px 60% 18px;
+  animation:popShout .18s ease-out;transform:translate(-50%,-100%) rotate(-3deg)}
+@keyframes pop{from{transform:translate(-50%,-100%) scale(.2)}to{transform:translate(-50%,-100%) scale(1)}}
+@keyframes popShout{from{transform:translate(-50%,-100%) rotate(-3deg) scale(.2)}to{transform:translate(-50%,-100%) rotate(-3deg) scale(1)}}
+
+/* ---------- Cards (baralla espanyola) ---------- */
+.card{
+  width:72px;height:108px;background:#fff;border:2.5px solid var(--ink);border-radius:7px;
+  box-shadow:3px 3px 0 rgba(34,32,26,.32);position:relative;font-weight:bold;
+}
+.card svg{display:block;width:100%;height:100%}
+.card img{display:block;width:100%;height:100%;object-fit:cover;border-radius:5px}
+.card .peca{position:absolute;bottom:1px;left:50%;transform:translateX(-50%);font-size:8px;
+  background:var(--red);color:#fff;border-radius:6px;
+  padding:0 5px;border:2px solid var(--ink);white-space:nowrap;z-index:2}
+.card.back{background:
+  repeating-linear-gradient(45deg, rgba(34,32,26,.25) 0 3px, transparent 3px 9px),
+  repeating-linear-gradient(-45deg, rgba(34,32,26,.18) 0 3px, transparent 3px 9px),
+  var(--red);}
+.card.back:after{content:'☼';color:var(--paper);font-size:26px;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-shadow:1px 1px 0 var(--ink)}
+
+/* player hand */
+#handArea{display:flex;flex-direction:column;align-items:center;gap:8px;padding:6px 8px 14px;z-index:20;width:100%}
+/* barra d'accions d'alçada FIXA: mai mou la taula ni les cartes */
+#actions{display:flex;gap:6px;flex-wrap:nowrap;justify-content:center;align-items:center;
+  height:54px;max-width:100vw;overflow-x:auto}
+#actions button{font-size:14px;padding:8px 10px;background:var(--paper);white-space:nowrap;flex-shrink:0}
+#actions button.atk{background:var(--red);color:#fff}
+#actions button.flash{background:var(--gold2)}
+#hand{display:flex;gap:10px}
+#hand .card{width:98px;height:147px;transition:transform .15s}
+#hand .card .peca{font-size:10px;padding:0 7px}
+#hand .card.playable{cursor:pointer}
+#hand .card.playable:active{transform:translateY(-12px)}
+#hand .card.dim{opacity:.45}
+
+/* ---------- Gin bottle on the table ---------- */
+#ginWrap{position:absolute;left:67%;top:66%;width:52px;z-index:6;transform:translate(-50%,-50%) rotate(3deg);
+  filter:drop-shadow(3px 4px 0 rgba(0,0,0,.3))}
+
+/* ---------- Flash overlay (senyes) ---------- */
+#flashOverlay{position:fixed;inset:0;background:rgba(255,255,255,.65);z-index:90;display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:10px}
+#flashOverlay .fcards{display:flex;gap:12px}
+#flashOverlay .card{width:108px;height:162px}
+#flashOverlay .ftxt{font-size:22px;font-weight:bold;background:var(--gold2);border:4px solid var(--ink);
+  border-radius:16px;padding:6px 18px;box-shadow:4px 4px 0 rgba(0,0,0,.35);transform:rotate(-2deg)}
+
+/* ---------- Modal (decisions) — abaix, que es vegin les cartes de la taula! ---------- */
+#modal{position:fixed;inset:0;background:linear-gradient(rgba(34,32,26,0) 55%, rgba(34,32,26,.35));
+  z-index:80;display:flex;align-items:flex-end;justify-content:center;padding:10px}
+#modalCard{background:var(--paper);padding:12px 14px;width:min(94vw,400px);text-align:center;
+  display:flex;flex-direction:column;gap:8px;margin-bottom:4px}
+#modalTitle{font-size:18px;font-weight:bold}
+#modalSub{font-size:12px;opacity:.8}
+#modalBtns{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+#modalBtns button{font-size:15px;padding:9px 12px;background:#fff;flex:1 1 40%}
+#modalBtns button.atk{background:var(--red);color:#fff}
+#modalBtns button.safe{background:#cfe8cf}
+
+/* mini-reproductor de Joana Pons (YouTube oficial) */
+#ytPlayer{position:fixed;right:6px;top:56px;width:176px;height:99px;z-index:60;
+  border:3px solid var(--ink);border-radius:10px;overflow:hidden;
+  box-shadow:3px 3px 0 rgba(34,32,26,.35);background:#000}
+#ytPlayer iframe{width:100%;height:100%;border:0;display:block}
+
+/* toast center */
+#toast{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%) rotate(-2deg);z-index:85;
+  background:#ffe14d;border:4px solid var(--ink);border-radius:18px;padding:12px 22px;font-size:26px;
+  font-weight:bold;color:var(--red);text-shadow:1px 1px 0 var(--ink);box-shadow:5px 5px 0 rgba(0,0,0,.4);
+  animation:pop .2s ease-out}
+
+@media (max-height:640px){
+  .player .avatar{width:80px;height:80px}
+  #hand .card{width:80px;height:120px}
+  .card{width:62px;height:93px}
+}
+/* mòbils estrets: tot una mica més recollit */
+@media (max-width:430px){
+  .player .avatar{width:90px;height:90px}
+  .player{width:104px}
+  #hand .card{width:30vw;max-width:98px;height:45vw;max-height:147px}
+  .bubble{font-size:16px;padding:8px 14px}
+  .bubble.shout{font-size:20px}
+  #actions button{font-size:13px;padding:8px 8px}
+  #scoreBox{font-size:11px}
+  #scoreBox .pts{font-size:15px}
+}
+button,.card{touch-action:manipulation} /* sense zoom accidental amb dits ràpids */
+
+/* ---------- Escenari: bar menorquí amb vista a una cala ---------- */
+#barScene{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+#barScene svg{width:100%;height:100%;display:block}
+#scrGame #topBar,#scrGame #msgLine{position:relative;z-index:30}
+#scrGame #tableArea{z-index:1}
+#scrGame #handArea{position:relative;z-index:20}
+</style>
+</head>
+<body>
+
+<!-- ================= CONFIG SCREEN ================= -->
+<div id="scrConfig" class="screen">
+  <div id="titleWrap">
+    <h1 class="logo">TRUC<span>!</span></h1>
+  </div>
+  <div class="subtitle" id="cfgSubtitle">Es joc de cartes menorquí</div>
+
+  <div class="cfgCard comic-border">
+    <div class="cfgRow">
+      <span class="lbl" id="lblLang">Idioma</span>
+      <div class="seg" id="segLang">
+        <button data-v="ca" class="on">Menorquí</button>
+        <button data-v="es">Castellano</button>
+      </div>
+    </div>
+    <div class="cfgRow">
+      <span class="lbl" id="lblDoses">Jugar amb dosos?</span>
+      <div class="seg" id="segDoses">
+        <button data-v="1" class="on" id="btnDosesSi">Sí (30)</button>
+        <button data-v="0" id="btnDosesNo">No (26)</button>
+      </div>
+    </div>
+    <div class="cfgRow">
+      <span class="lbl" id="lblMusic">Música</span>
+      <div class="seg" id="segMusic">
+        <button data-v="gtr" class="on" id="btnMusicGtr">🎸</button>
+        <button data-v="jp" id="btnMusicJp">🎵 Joana Pons</button>
+        <button data-v="off" id="btnMusicOff">🔇</button>
+      </div>
+    </div>
+    <div class="miniNote" id="cfgNote">Tu i na Maria contra en Toni i en Biel. A dues cames de 24!</div>
+    <button class="bigStart" id="btnStart">JUGAM? 🃏</button>
+    <div class="miniNote">v1.0 · Cartes: Basquetteur — Wikimedia Commons, CC BY-SA 3.0</div>
+  </div>
+  <div style="width:90px" id="cfgGin"></div>
+</div>
+
+<!-- ================= GAME SCREEN ================= -->
+<div id="scrGame" class="screen hidden">
+  <div id="barScene"></div>
+  <div id="topBar">
+    <div id="scoreBox">
+      <div class="scTeam"><span id="lblNoltros">NOLTROS</span><span class="pts" id="ptsN">0</span><span class="cames" id="camN"></span></div>
+      <div id="phase" style="font-size:10px;text-align:center;line-height:1.2">⚔</div>
+      <div class="scTeam"><span id="lblElls">ELLS</span><span class="pts" id="ptsE">0</span><span class="cames" id="camE"></span></div>
+    </div>
+    <button id="btnMusic">🎸</button>
+  </div>
+  <div id="msgLine">&nbsp;</div>
+
+  <div id="tableArea">
+   <div id="tableInner">
+    <div id="mesa"></div>
+    <div id="ginWrap"></div>
+    <div id="mazo"></div>
+    <div class="slot" id="slot0"></div>
+    <div class="slot" id="slot1"></div>
+    <div class="slot" id="slot2"></div>
+    <div class="slot" id="slot3"></div>
+    <div class="player" id="pl1"><div class="avatar" data-av="toni"></div><div class="pname">Toni</div><div class="ncards"></div></div>
+    <div class="player" id="pl2"><div class="avatar" data-av="maria"></div><div class="pname">Maria</div><div class="ncards"></div></div>
+    <div class="player" id="pl3"><div class="avatar" data-av="biel"></div><div class="pname">Biel</div><div class="ncards"></div></div>
+   </div>
+  </div>
+
+  <div id="handArea">
+    <div id="actions"></div>
+    <div id="hand"></div>
+  </div>
+</div>
+
+<!-- overlays -->
+<div id="flashOverlay" class="hidden"></div>
+<div id="modal" class="hidden"><div id="modalCard" class="comic-border">
+  <div id="modalTitle"></div><div id="modalSub"></div><div id="modalBtns"></div>
+</div></div>
+<div id="toast" class="hidden"></div>
+
+<script src="cartas_data.js"></script>
+<script>
+"use strict";
+/* ====================================================================
+   TRUC MENORQUÍ — prototip v1
+   Regles: REGLAS_TRUC_MENORQUI.md (font: INJOVE, Consell Insular de Menorca)
+   Simplificacions v1 (documentades):
+   - Empat a la 1a basa: es resol amb la regla "guanya qui mata la 2a"
+     (variant de poble) en lloc de tirar dues cartes alhora.
+   - Si no hi ha lligat, el valor d'envit és l'índex de la carta més alta.
+   - Després d'una basa empatada torna a tirar el mateix jugador que va obrir.
+   ==================================================================== */
+
+/* ---------------- i18n ---------------- */
+const T = {
+ ca:{
+  subtitle:"Es joc de cartes menorquí", lang:"Idioma", doses:"Jugar amb dosos?",
+  dosesSi:"Sí (30)", dosesNo:"No (26)", music:"Música",
+  musicGtr:"🎸", musicJp:"🎵 Joana Pons", musicOff:"🔇",
+  note:"Tu i na Maria contra en Toni i en Biel. A dues cames de 24!",
+  start:"JUGAM? 🃏", noltros:"NOLTROS", ells:"ELLS",
+  you:"Tu", deals:"reparteix", yourTurn:"Et toca tirar!", maTurn:"ets mà",
+  truc:"TRUC!", retruc:"RETRUC!", valnou:"VAL NOU!", cama:"CAMA!",
+  envit:"ENVIT!", joenvit:"JO ENVIT!", dosmes:"DOS MÉS!", tots:"TOTS!",
+  vull:"Vull!", novull:"No vull", menvaig:"Me'n vaig", fersenya:"⚡ Fer senya",
+  senyaEnvit:"👍 Envida-li!", senyaEnvitFeta:"Senya feta: na {M} envidarà",
+  mariaVol:"na {M} fa que sí amb es cap", mariaDubta:"na {M} arronsa ses espatlles", mariaNo:"na {M} fa mala cara",
+  diu:"diu", responType:"Què respons?", trucPregunta:"truquen a", envitPregunta:"enviden a",
+  guanyaBasa:"guanya sa volta", guanyaBasaTu:"Guanyes sa volta!", parda:"Volta parda!",
+  guanyaMa:"guanyen sa mà", guanyaMaN:"Guanyam sa mà!", dealsTu:"Reparteixes tu",
+  guanyenEnvit:"guanyen s'envit", guanyamEnvit:"Guanyam s'envit", abandonenN:"Mo n'anam...",
+  punts:"punts", punt:"punt", voltaLbl:"VOLTA",
+  noVolen:"No volen!", senyaFeta:"Has fet senya a na {M} ⚡",
+  mariaSenya:"⚡ Na {M} et fa senya!", camaGuanyada:"CAMA GUANYADA!", camaPerduda:"Cama per ells...",
+  victoria:"HEU GUANYAT ES COT! 🏆", derrota:"Han guanyat ells... revenja?",
+  novaPartida:"Una altra partida", seguir:"Seguim!", abandonen:"se'n van...",
+  lligatTeu:"Es teu lligat", lligatSeu:"Es seu millor lligat",
+ },
+ es:{
+  subtitle:"El juego de cartas menorquín", lang:"Idioma", doses:"¿Jugar con doses?",
+  dosesSi:"Sí (30)", dosesNo:"No (26)", music:"Música",
+  musicGtr:"🎸", musicJp:"🎵 Joana Pons", musicOff:"🔇",
+  note:"Tú y Maria contra Toni y Biel. ¡A dos cames de 24!",
+  start:"¿JUGAMOS? 🃏", noltros:"NOSOTROS", ells:"ELLOS",
+  you:"Tú", deals:"reparte", yourTurn:"¡Te toca tirar!", maTurn:"eres mà",
+  truc:"TRUC!", retruc:"RETRUC!", valnou:"VAL NOU!", cama:"CAMA!",
+  envit:"ENVIT!", joenvit:"JO ENVIT!", dosmes:"DOS MÉS!", tots:"TOTS!",
+  vull:"¡Vull!", novull:"No vull", menvaig:"Me'n vaig", fersenya:"⚡ Hacer seña",
+  senyaEnvit:"👍 ¡Que envide!", senyaEnvitFeta:"Seña hecha: {M} envidará",
+  mariaVol:"{M} asiente con la cabeza", mariaDubta:"{M} se encoge de hombros", mariaNo:"{M} pone mala cara",
+  diu:"dice", responType:"¿Qué respondes?", trucPregunta:"os trucan a", envitPregunta:"os envidan a",
+  guanyaBasa:"gana la baza", guanyaBasaTu:"¡Ganas la baza!", parda:"¡Baza parda!",
+  guanyaMa:"ganan la mano", guanyaMaN:"¡Ganamos la mano!", dealsTu:"Repartes tú",
+  guanyenEnvit:"ganan el envit", guanyamEnvit:"Ganamos el envit", abandonenN:"Nos vamos...",
+  punts:"puntos", punt:"punto", voltaLbl:"BAZA",
+  noVolen:"¡No quieren!", senyaFeta:"Has hecho seña a {M} ⚡",
+  mariaSenya:"⚡ ¡{M} te hace seña!", camaGuanyada:"¡CAMA GANADA!", camaPerduda:"Cama para ellos...",
+  victoria:"¡HABÉIS GANADO! 🏆", derrota:"Han ganado ellos... ¿revancha?",
+  novaPartida:"Otra partida", seguir:"¡Seguimos!", abandonen:"se retiran...",
+  lligatTeu:"Tu ligado", lligatSeu:"Su mejor ligado",
+ }
+};
+let LANG="ca";
+const t=k=>(T[LANG][k]||k).replace(/\{M\}/g,NAMES[2]);
+
+/* ---------------- Baralla espanyola clàssica (pintes + figures) ----------------
+   Cartes a l'estil Fournier: marc interior taronja, índex a les cantonades
+   i les pintes col·locades com a la baralla de tota la vida. */
+const PIP={
+ O:`<circle cx="20" cy="20" r="16" fill="#e3b341" stroke="#22201a" stroke-width="3"/><circle cx="20" cy="20" r="8" fill="#f3dfa3" stroke="#22201a" stroke-width="2"/>`,
+ C:`<path d="M8 5 h24 v9 a12 12 0 0 1 -24 0 z" fill="#e3b341" stroke="#22201a" stroke-width="2.8"/><path d="M12 8 h7" stroke="#fff" stroke-width="1.6" opacity=".7" fill="none"/><rect x="17" y="25" width="6" height="6" fill="#e3b341" stroke="#22201a" stroke-width="2.2"/><rect x="10" y="31" width="20" height="5.5" rx="2" fill="#c0563f" stroke="#22201a" stroke-width="2.2"/>`,
+ E:`<g transform="rotate(28 20 20)"><path d="M20 1 l4.5 5 -2.6 19 h-3.8 l-2.6 -19 z" fill="#6f8fb0" stroke="#22201a" stroke-width="2.4"/><path d="M19.3 6 l-1.2 13" stroke="#fff" stroke-width="1" opacity=".7" fill="none"/><rect x="11" y="25" width="18" height="4.6" rx="2" fill="#8a6a3e" stroke="#22201a" stroke-width="2"/><rect x="17" y="29" width="6" height="9" rx="2" fill="#8a6a3e" stroke="#22201a" stroke-width="2"/></g>`,
+ B:`<g transform="rotate(-24 20 20)"><path d="M16 38 l2.6 -21 a4.5 5.5 0 0 1 -2.6 -6.5 q4 -6.5 8 0 a4.5 5.5 0 0 1 -2.6 6.5 l2.6 21 z" fill="#7d8f4a" stroke="#22201a" stroke-width="2.4"/><path d="M18.5 18 l-.8 16" stroke="#22201a" stroke-width=".8" opacity=".5" fill="none"/></g>`
+};
+function pipAt(s,x,y,k){return `<g transform="translate(${x-20*k} ${y-20*k}) scale(${k})">${PIP[s]}</g>`}
+const PIP_POS={
+ 1:[[30,46]],
+ 2:[[30,29],[30,63]],
+ 3:[[30,25],[30,46],[30,67]],
+ 4:[[22,29],[38,29],[22,63],[38,63]],
+ 5:[[22,29],[38,29],[30,46],[22,63],[38,63]],
+ 6:[[22,25],[38,25],[22,46],[38,46],[22,67],[38,67]],
+ 7:[[22,25],[38,25],[30,35.5],[22,46],[38,46],[22,67],[38,67]]
+};
+/* figures: l'amo (cavall de bastos) i sa madona (sota d'oros) */
+const FIG_AMO=`<g stroke="#22201a" stroke-linecap="round">
+ <path d="M19 51 q-6 -2 -7 -10 q3 2 5 4" fill="#c8965a" stroke-width="2"/>
+ <ellipse cx="30" cy="53" rx="13" ry="7.5" fill="#c8965a" stroke-width="2.2"/>
+ <path d="M40 51 q5 -2 6 -12 l5 -1 q4 3 3 7 l-5 1 -2 7 z" fill="#c8965a" stroke-width="2"/>
+ <path d="M46 39 l-1.5 -4 3 2.5 z M50 38.5 l.5 -4 1.5 4 z" fill="#c8965a" stroke-width="1.6"/>
+ <circle cx="49.5" cy="42" r=".9" fill="#22201a" stroke="none"/>
+ <path d="M45 41 q-2 4 -1 8" stroke-width="1.4" fill="none" opacity=".6"/>
+ <path d="M22 59 v9 M28 60 v9 M33 60 v9 M39 59 v9" stroke-width="2.2" fill="none"/>
+ <path d="M25 37 q-1 9 4.5 10 q5.5 -1 4.5 -10 z" fill="#3a362c" stroke-width="2"/>
+ <circle cx="29.5" cy="30" r="5" fill="#eed7ae" stroke-width="2"/>
+ <circle cx="28" cy="30" r=".7" fill="#22201a" stroke="none"/><circle cx="31.5" cy="30" r=".7" fill="#22201a" stroke="none"/>
+ <ellipse cx="29.5" cy="25.5" rx="7.5" ry="2.2" fill="#22201a" stroke-width="1.4"/>
+ <path d="M25 25.5 q0 -5 4.5 -5 q4.5 0 4.5 5" fill="#22201a" stroke-width="1.4"/>
+ <path d="M34 39 l7 -13" stroke-width="2.2" fill="none"/>
+ ${pipAt("B",43,21,.3)}
+</g>`;
+const FIG_MADONA=`<g stroke="#22201a" stroke-linecap="round">
+ <path d="M22 38 q8 -5 16 0 l3.5 23 q-11.5 4.5 -23 0 z" fill="#b5483a" stroke-width="2.2"/>
+ <path d="M24 46 q6 2 12 0 M23 53 q7 2.5 14 0" stroke-width="1" fill="none" opacity=".5"/>
+ <path d="M25 43 l-5 7 M35 43 l5 -11" stroke-width="2.2" fill="none"/>
+ <path d="M25 64 v6 M35 64 v6" stroke-width="2.2" fill="none"/>
+ <circle cx="30" cy="28" r="6" fill="#eed7ae" stroke-width="2.2"/>
+ <circle cx="28" cy="28" r=".8" fill="#22201a" stroke="none"/><circle cx="32" cy="28" r=".8" fill="#22201a" stroke="none"/>
+ <path d="M28 31 q2 1.6 4 0" stroke-width="1.2" fill="none"/>
+ <path d="M23.5 26 q6.5 -7 13 0 l1 4 q-7.5 -3.5 -15 0 z" fill="#fbf6e8" stroke-width="2"/>
+ ${pipAt("O",42,28,.32)}
+</g>`;
+function cardSVG(c){
+ let inner="";
+ if(isAmo(c)) inner=FIG_AMO;
+ else if(isMadona(c)) inner=FIG_MADONA;
+ else inner=PIP_POS[c.n].map(p=>pipAt(c.s,p[0],p[1],c.n===1?.6:.33)).join("");
+ const idx=`<text x="7" y="12" font-size="9" font-weight="bold" fill="#22201a" font-family="inherit" text-anchor="middle">${c.n}</text>${pipAt(c.s,7,17.5,.14)}`;
+ return `<svg viewBox="0 0 60 90" preserveAspectRatio="xMidYMid meet">
+  <rect x="3.5" y="3.5" width="53" height="83" rx="3" fill="none" stroke="#d4691e" stroke-width="1.5"/>
+  ${idx}<g transform="rotate(180 30 45)">${idx}</g>${inner}</svg>`;
+}
+
+/* ---------------- SVG art: payesos caricatura (estil vinyeta de premsa) ----------------
+   Trazo a plumilla: filtre de turbulència per fer la línia tremolosa "a mà",
+   nassos grossos, ulls de puntet, trames de ratlletes. */
+const INK="#22201a", SKIN="#eed7ae", SHIRT="#faf5e6", VEST="#3a362c";
+function roughFilter(id){
+ return `<defs><filter id="${id}" x="-15%" y="-15%" width="130%" height="130%">
+  <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="2" seed="11" result="n"/>
+  <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4"/></filter></defs>`;
+}
+function hatch(x,y,n,len,gap,ang){ // trama de ratlletes
+ let s="";for(let i=0;i<n;i++){
+  const dx=Math.cos(ang)*len,dy=Math.sin(ang)*len;
+  s+=`<line x1="${x+i*gap}" y1="${y}" x2="${x+i*gap+dx}" y2="${y+dy}" stroke="${INK}" stroke-width="1" opacity=".55"/>`;
+ }return s;
+}
+function avatarSVG(kind){
+ const cos=`
+  <path d="M22 99 q2 -24 16 -28 l12 7 12 -7 q14 4 16 28 z" fill="${SHIRT}" stroke="${INK}" stroke-width="3"/>
+  <path d="M24 99 q2 -20 13 -25 l5 25 z" fill="${VEST}" stroke="${INK}" stroke-width="2.6"/>
+  <path d="M76 99 q-2 -20 -13 -25 l-5 25 z" fill="${VEST}" stroke="${INK}" stroke-width="2.6"/>
+  ${hatch(27,82,4,7,3,1.2)}${hatch(62,82,4,7,3,1.9)}
+  <rect x="38" y="91" width="24" height="8" fill="var(--red)" stroke="${INK}" stroke-width="2.6"/>
+  <path d="M40 93 h20 M40 96 h20" stroke="${INK}" stroke-width=".8" opacity=".4"/>`;
+
+ if(kind==="toni") return `<svg viewBox="0 0 100 100">${roughFilter("rgT")}<g filter="url(#rgT)">
+  ${cos}
+  <path d="M31 32 q-5 20 3 29 q5 8 16 8 q11 0 16 -7 q8 -10 3 -30 z" fill="${SKIN}" stroke="${INK}" stroke-width="2.8"/>
+  <path d="M29 42 a4 6 0 1 0 2 -1 z" fill="${SKIN}" stroke="${INK}" stroke-width="2"/>
+  <path d="M71 42 a4 6 0 1 1 -2 -1 z" fill="${SKIN}" stroke="${INK}" stroke-width="2"/>
+  <circle cx="42.5" cy="42" r="1.7" fill="${INK}"/><circle cx="56" cy="42" r="1.7" fill="${INK}"/>
+  <path d="M38 38 q4 -3 8 -1 M52 37 q4 -2 8 1" stroke="${INK}" stroke-width="2.6" fill="none"/>
+  <ellipse cx="49" cy="51" rx="8.5" ry="7" fill="${SKIN}" stroke="${INK}" stroke-width="2.6"/>
+  <circle cx="45.5" cy="53" r="1" fill="${INK}" opacity=".7"/>
+  <path d="M44 47 q3 -2 6 0" stroke="${INK}" stroke-width="1" fill="none" opacity=".5"/>
+  <path d="M35 58 q14 11 29 0 q-4 9 -14.5 9 q-10.5 0 -14.5 -9 z" fill="${INK}"/>
+  ${hatch(34,67,5,4,3,1.4)}${hatch(57,67,5,4,3,1.7)}
+  <ellipse cx="50" cy="25" rx="29" ry="7.5" fill="${INK}"/>
+  <path d="M34 25 q0 -15 16 -15 q16 0 16 15 z" fill="${INK}"/>
+  <path d="M36 21 h28" stroke="#6b6557" stroke-width="2"/>
+  </g></svg>`;
+
+ if(kind==="biel") return `<svg viewBox="0 0 100 100">${roughFilter("rgB")}<g filter="url(#rgB)">
+  ${cos}
+  <path d="M36 30 q-7 19 0 31 q4 8 13 8 q9 0 13 -8 q6 -13 0 -31 z" fill="${SKIN}" stroke="${INK}" stroke-width="2.8"/>
+  <ellipse cx="31" cy="45" rx="4.5" ry="7" fill="${SKIN}" stroke="${INK}" stroke-width="2.4"/>
+  <ellipse cx="69" cy="45" rx="4.5" ry="7" fill="${SKIN}" stroke="${INK}" stroke-width="2.4"/>
+  <path d="M30 43 q2 2 1 5 M70 43 q-2 2 -1 5" stroke="${INK}" stroke-width="1" fill="none" opacity=".5"/>
+  <circle cx="44" cy="41" r="3.2" fill="#fff" stroke="${INK}" stroke-width="1.8"/>
+  <circle cx="57" cy="41" r="3.2" fill="#fff" stroke="${INK}" stroke-width="1.8"/>
+  <circle cx="44.7" cy="41.6" r="1.2" fill="${INK}"/><circle cx="57.7" cy="41.6" r="1.2" fill="${INK}"/>
+  <path d="M40 34 q4 -4 8 -2 M53 32 q4 -2 8 2" stroke="${INK}" stroke-width="2.4" fill="none"/>
+  <path d="M50 42 q6 9 -1 15 q4 2 6 0" fill="none" stroke="${INK}" stroke-width="2.6"/>
+  <path d="M42 62 q8 7 16 0 q-2 6 -8 6 q-6 0 -8 -6 z" fill="#fff" stroke="${INK}" stroke-width="2.2"/>
+  <circle cx="39" cy="55" r=".8" fill="${INK}" opacity=".5"/><circle cx="63" cy="56" r=".8" fill="${INK}" opacity=".5"/>
+  <path d="M30 27 q2 -14 20 -14 q18 0 20 14 q-20 -6 -40 0 z" fill="${INK}"/>
+  <ellipse cx="50" cy="27" rx="22" ry="4.5" fill="${INK}"/>
+  <circle cx="50" cy="13" r="2.5" fill="${INK}"/>
+  </g></svg>`;
+
+ if(kind==="maria") return `<svg viewBox="0 0 100 100">${roughFilter("rgM")}<g filter="url(#rgM)">
+  <path d="M24 99 q2 -22 16 -26 l10 6 10 -6 q14 4 16 26 z" fill="#7a6f56" stroke="${INK}" stroke-width="3"/>
+  <path d="M33 80 l-6 19 M67 80 l6 19" stroke="${INK}" stroke-width="1.6" opacity=".5"/>
+  ${hatch(30,84,4,7,3.2,1.3)}${hatch(60,84,4,7,3.2,1.8)}
+  <path d="M50 74 v8" stroke="${INK}" stroke-width="2"/>
+  <path d="M47.5 82 h5 v5 h-5 z M50 82 v5 M47.5 84.5 h5" stroke="${INK}" stroke-width="1.3" fill="#e3b341"/>
+  <path d="M29 48 q-6 -30 21 -30 q27 0 21 30 l-2 6 q-19 8 -38 0 z" fill="#8a7a64" stroke="${INK}" stroke-width="2.8"/>
+  <circle cx="68" cy="22" r="7" fill="#8a7a64" stroke="${INK}" stroke-width="2.6"/>
+  <path d="M64 20 q4 -2 7 1 M65 24 q3 -2 6 0" stroke="${INK}" stroke-width=".9" fill="none" opacity=".5"/>
+  <path d="M31 46 q-3 -22 19 -22 q22 0 19 22 q1 11 -5.5 15 q-13.5 6 -27 0 q-6.5 -4 -5.5 -15 z" fill="${SKIN}" stroke="${INK}" stroke-width="2.6"/>
+  <path d="M32 33 q8 -8 17 -7 M68 33 q-6 -7 -14 -7" stroke="${INK}" stroke-width="1.4" fill="none" opacity=".6"/>
+  <circle cx="43" cy="42" r="1.6" fill="${INK}"/><circle cx="57" cy="42" r="1.6" fill="${INK}"/>
+  <path d="M40.5 44.5 q2.5 2 5 .5 M54.5 45 q2.5 1.5 5 -.5" stroke="${INK}" stroke-width="1.1" fill="none" opacity=".55"/>
+  <path d="M39 38.5 q4 -2.5 7 -1 M54 37.5 q4 -1.5 7 1" stroke="${INK}" stroke-width="2" fill="none"/>
+  <path d="M50 44 q3.5 6 -.5 10 q2 1.5 4 .5" fill="none" stroke="${INK}" stroke-width="2.3"/>
+  <path d="M41 60 q9 7 18 -.5" stroke="${INK}" stroke-width="2.3" fill="none"/>
+  <path d="M44 63.5 q6 3 12 -.5" stroke="${INK}" stroke-width="1.1" fill="none" opacity=".5"/>
+  ${hatch(34,52,3,3,2.6,1.5)}${hatch(61,52,3,3,2.6,1.6)}
+  <path d="M36 18 q14 -8 28 0" stroke="#b5483a" stroke-width="3.5" fill="none"/>
+  </g></svg>`;
+ return "";
+}
+
+/* ---------------- SVG art: botella de gin estil Xoriguer + copeta (a plumilla) ---------------- */
+const GIN_SVG=`<svg viewBox="0 0 100 130">
+ <defs><filter id="rgG" x="-15%" y="-15%" width="130%" height="130%">
+  <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="2" seed="4" result="n"/>
+  <feDisplacementMap in="SourceGraphic" in2="n" scale="2.2"/></filter></defs>
+ <g filter="url(#rgG)">
+ <rect x="44" y="6" width="12" height="14" rx="3" fill="#b59a55" stroke="#22201a" stroke-width="2.8"/>
+ <path d="M40 20 h20 q8 14 8 30 v70 a6 6 0 0 1 -6 6 h-24 a6 6 0 0 1 -6 -6 v-70 q8 -16 8 -30 z"
+   fill="#41604a" stroke="#22201a" stroke-width="3"/>
+ <path d="M37 42 q-2 30 0 78 M64 35 q4 12 4 30" stroke="#f6eed9" stroke-width="1.6" fill="none" opacity=".5"/>
+ <rect x="38" y="58" width="44" height="40" rx="4" fill="#f6eed9" stroke="#22201a" stroke-width="2.6"/>
+ <g stroke="#22201a" stroke-width="2" fill="none">
+   <rect x="56" y="68" width="8" height="12" fill="#f6eed9"/>
+   <path d="M60 68 l-9 -8 M60 68 l9 -8 M60 73 l-10 6 M60 73 l10 6"/>
+ </g>
+ <text x="60" y="91" text-anchor="middle" font-size="8" font-weight="bold" fill="#22201a" font-family="inherit">GIN</text>
+ <text x="60" y="96.5" text-anchor="middle" font-size="4.6" font-weight="bold" fill="#b5483a" font-family="inherit">XORIGUER</text>
+ <ellipse cx="17" cy="114" rx="11" ry="4" fill="#e9e2cc" stroke="#22201a" stroke-width="2.4"/>
+ <path d="M7 114 l3 13 h14 l3 -13" fill="#e9e2cc" stroke="#22201a" stroke-width="2.4"/>
+ <path d="M10 120 h14" stroke="#22201a" stroke-width="1" opacity=".4"/>
+ </g>
+</svg>`;
+
+/* ---------------- SVG art: es bar menorquí amb vista a sa cala ---------------- */
+const BAR_SVG=`<svg viewBox="0 0 420 740" preserveAspectRatio="xMidYMid slice">
+ <rect width="420" height="740" fill="#f2e7cd"/>
+ <g stroke="#22201a" opacity=".06" stroke-width="1">
+   <path d="M0 320 h420 M0 420 h420 M0 540 h420 M0 640 h420"/></g>
+ <!-- bigues de fusta -->
+ <rect x="0" y="0" width="420" height="30" fill="#6e5a3c" stroke="#22201a" stroke-width="3"/>
+ <path d="M14 6 q60 6 120 2 M180 22 q70 -5 130 0 M330 8 q40 4 80 2" stroke="#22201a" stroke-width="1.2" fill="none" opacity=".4"/>
+ <rect x="0" y="30" width="420" height="9" fill="#594832" stroke="#22201a" stroke-width="2"/>
+ <!-- finestra amb arc: sa cala -->
+ <g>
+  <path d="M96 250 v-110 q0 -62 114 -62 q114 0 114 62 v110 z" fill="#7c5f38" stroke="#22201a" stroke-width="4"/>
+  <path d="M108 240 v-100 q0 -52 102 -52 q102 0 102 52 v100 z" fill="#d8ecea" stroke="#22201a" stroke-width="3"/>
+  <!-- cel i sol -->
+  <circle cx="160" cy="122" r="17" fill="#f3dfa3" stroke="#22201a" stroke-width="2.4"/>
+  <path d="M160 98 v-6 M178 106 l4 -5 M183 122 h7 M138 106 l-4 -5 M137 122 h-7" stroke="#22201a" stroke-width="2" fill="none"/>
+  <path d="M236 116 q5 -5 10 0 q5 -5 10 0 M252 132 q4 -4 8 0 q4 -4 8 0" stroke="#22201a" stroke-width="1.6" fill="none"/>
+  <!-- penya-segats blancs -->
+  <path d="M108 192 l30 -28 q8 -6 14 2 l10 14 v60 h-54 z" fill="#f6f1e2" stroke="#22201a" stroke-width="2.4"/>
+  <path d="M312 188 l-26 -24 q-8 -7 -14 0 l-8 10 v66 h48 z" fill="#f6f1e2" stroke="#22201a" stroke-width="2.4"/>
+  <path d="M118 200 l14 -13 M122 216 l10 -9 M296 198 l-12 -11 M294 214 l-9 -8" stroke="#22201a" stroke-width="1.1" fill="none" opacity=".5"/>
+  <!-- pins damunt es penya-segats -->
+  <path d="M124 166 q-3 -14 10 -18 q12 -4 14 8 q10 0 8 10 z" fill="#5e7a4a" stroke="#22201a" stroke-width="2"/>
+  <path d="M290 162 q4 -13 -9 -16 q-12 -3 -13 8 q-9 1 -7 9 z" fill="#5e7a4a" stroke="#22201a" stroke-width="2"/>
+  <!-- la mar -->
+  <path d="M108 206 q50 -8 102 0 q52 8 102 0 v34 h-204 z" fill="#7ec4ba" stroke="#22201a" stroke-width="2.4"/>
+  <path d="M120 218 q12 -4 24 0 M160 228 q12 -4 24 0 M210 218 q12 -4 24 0 M256 228 q12 -4 24 0" stroke="#22201a" stroke-width="1.3" fill="none" opacity=".55"/>
+  <!-- llaüt -->
+  <g>
+   <path d="M178 210 q32 8 62 0 l-8 12 q-23 5 -46 0 z" fill="#fbf6e8" stroke="#22201a" stroke-width="2.4"/>
+   <path d="M180 214 q30 7 58 -1" stroke="#b5483a" stroke-width="2.6" fill="none"/>
+   <path d="M209 210 v-26" stroke="#22201a" stroke-width="2.2"/>
+   <path d="M209 186 q18 8 0 22" fill="#fbf6e8" stroke="#22201a" stroke-width="2"/>
+  </g>
+ </g>
+ <!-- prestatge amb botelles -->
+ <g>
+  <rect x="10" y="300" width="104" height="8" fill="#7c5f38" stroke="#22201a" stroke-width="2.6"/>
+  <path d="M20 300 v-34 q0 -5 4 -5 h6 q4 0 4 5 v34 z" fill="#41604a" stroke="#22201a" stroke-width="2.2"/>
+  <rect x="24" y="252" width="6" height="12" fill="#41604a" stroke="#22201a" stroke-width="1.8"/>
+  <path d="M44 300 v-28 q0 -5 4 -5 h6 q4 0 4 5 v28 z" fill="#a9743c" stroke="#22201a" stroke-width="2.2"/>
+  <rect x="48" y="258" width="6" height="11" fill="#a9743c" stroke="#22201a" stroke-width="1.8"/>
+  <path d="M68 300 v-32 q0 -5 4 -5 h6 q4 0 4 5 v32 z" fill="#cfd8d2" stroke="#22201a" stroke-width="2.2"/>
+  <rect x="72" y="254" width="6" height="11" fill="#cfd8d2" stroke="#22201a" stroke-width="1.8"/>
+  <path d="M92 300 v-24 q0 -4 3.5 -4 h5 q3.5 0 3.5 4 v24 z" fill="#b5483a" stroke="#22201a" stroke-width="2.2"/>
+ </g>
+ <!-- sobrassades i formatge penjats -->
+ <g>
+  <path d="M352 39 v30 M384 39 v22" stroke="#22201a" stroke-width="1.8"/>
+  <path d="M352 69 q-9 4 -9 16 q0 14 9 14 q9 0 9 -14 q0 -12 -9 -16 z" fill="#8e3b2e" stroke="#22201a" stroke-width="2.4"/>
+  <path d="M352 99 q-7 3 -7 13 q0 11 7 11 q7 0 7 -11 q0 -10 -7 -13 z" fill="#8e3b2e" stroke="#22201a" stroke-width="2.4"/>
+  <path d="M347 82 q5 3 10 0 M348 109 q4 2 8 0" stroke="#22201a" stroke-width="1.1" fill="none" opacity=".5"/>
+  <path d="M384 61 a13 13 0 1 0 .1 0 z" fill="#e8d49a" stroke="#22201a" stroke-width="2.4"/>
+  <path d="M377 68 h14 M379 75 h10" stroke="#22201a" stroke-width="1" opacity=".4" fill="none"/>
+ </g>
+ <!-- guiterra recolzada -->
+ <g transform="rotate(8 40 620)">
+  <path d="M40 560 q-15 0 -17 16 q-1 9 6 13 q-9 4 -8 16 q2 18 19 18 q17 0 19 -18 q1 -12 -8 -16 q7 -4 6 -13 q-2 -16 -17 -16 z" fill="#c8965a" stroke="#22201a" stroke-width="2.8"/>
+  <circle cx="40" cy="595" r="7" fill="#594832" stroke="#22201a" stroke-width="2.2"/>
+  <rect x="36.5" y="508" width="7" height="54" fill="#7c5f38" stroke="#22201a" stroke-width="2.2"/>
+  <rect x="33" y="496" width="14" height="14" rx="3" fill="#594832" stroke="#22201a" stroke-width="2.2"/>
+  <path d="M38 510 v52 M42 510 v52" stroke="#fbf6e8" stroke-width=".8" opacity=".8"/>
+ </g>
+ <!-- bóta de vi -->
+ <g>
+  <path d="M340 600 q-12 24 0 48 q20 8 40 0 q12 -24 0 -48 q-20 -8 -40 0 z" fill="#a9743c" stroke="#22201a" stroke-width="2.8"/>
+  <path d="M336 612 q24 6 48 0 M336 636 q24 6 48 0" stroke="#22201a" stroke-width="2" fill="none"/>
+  <path d="M345 604 v42 M375 604 v42" stroke="#22201a" stroke-width="1.2" opacity=".4" fill="none"/>
+ </g>
+</svg>`;
+
+/* ---------------- Cartes i jerarquia ---------------- */
+const SUITS=["O","C","E","B"];
+function buildDeck(withDoses){
+ const d=[];
+ for(const s of SUITS) for(let n=1;n<=7;n++){
+   if(n===2 && !withDoses) continue;
+   d.push({s,n});
+ }
+ d.push({s:"B",n:11}); // l'amo
+ d.push({s:"O",n:10}); // sa madona
+ return d;
+}
+function isAmo(c){return c.s==="B"&&c.n===11}
+function isMadona(c){return c.s==="O"&&c.n===10}
+function rank(c){ // més alt = guanya
+ if(isAmo(c))return 13;
+ if(isMadona(c))return 12;
+ if(c.s==="E"&&c.n===1)return 11;   // espaseta
+ if(c.s==="B"&&c.n===1)return 10;   // bastet
+ if(c.s==="E"&&c.n===7)return 9;    // manilla d'espases
+ if(c.s==="O"&&c.n===7)return 8;    // manilla d'oros
+ if(c.n===3)return 7;
+ if(c.n===2)return 6;               // moixets (si es juga amb dosos)
+ if(c.n===1)return 5;               // asos bords (O,C)
+ if(c.n===7)return 4;               // sets bords (C,B)
+ if(c.n===6)return 3;
+ if(c.n===5)return 2;
+ return 1;                          // quatres
+}
+function pecaName(c){
+ if(isAmo(c))return "l'amo";
+ if(isMadona(c))return "madona";
+ if(c.s==="E"&&c.n===1)return "espaseta";
+ if(c.s==="B"&&c.n===1)return "bastet";
+ if(c.n===7&&(c.s==="E"||c.s==="O"))return "manilla";
+ return null;
+}
+/* valor d'envit d'una mà de 3 cartes */
+function envitValue(hand){
+ let best=0;
+ for(let i=0;i<hand.length;i++)for(let j=i+1;j<hand.length;j++){
+   const a=hand[i],b=hand[j];let v=0;
+   if((isAmo(a)&&isMadona(b))||(isAmo(b)&&isMadona(a))) v=35;
+   else if(isAmo(a)) v=28+idxEnvit(b);
+   else if(isAmo(b)) v=28+idxEnvit(a);
+   else if(isMadona(a)) v=27+idxEnvit(b);
+   else if(isMadona(b)) v=27+idxEnvit(a);
+   else if(a.s===b.s) v=20+idxEnvit(a)+idxEnvit(b);
+   if(v>best)best=v;
+ }
+ if(best===0) best=Math.max(...hand.map(idxEnvit)); // simplificació: sense lligat
+ return best;
+}
+function idxEnvit(c){return c.n<=7?c.n:0}
+
+/* força de mà pel truc (heurística IA) */
+function handStrength(hand){
+ const rs=hand.map(rank).sort((a,b)=>b-a);
+ return rs[0]*2.2+rs[1]*1.3+rs[2]*0.4; // ~3.9 .. ~45
+}
+
+/* ---------------- Estat del joc ---------------- */
+let NAMES=["Tu","Toni","Maria","Biel"]; // 0 jugador, 1 dreta, 2 companya, 3 esquerra
+/* noms ben menorquins que van canviant a cada partida */
+const POOL_HOMES=["Toni","Biel","Pep","Xec","Bep","Tòfol","Llorenç","Miquel"];
+const POOL_DONES=["Maria","Joana","Margalida","Catalina","Bel","Àgueda"];
+const teamOf=s=>s%2===0?"N":"E";
+const otherTeam=tm=>tm==="N"?"E":"N";
+const TRUC_CHAIN=[ // [veu, valor si no volen, valor si volen]
+ ["truc",1,3],["retruc",3,6],["valnou",6,9],["cama",9,"cama"]];
+const ENVIT_CHAIN=[
+ ["envit",1,2],["joenvit",2,4],["dosmes",4,6],["tots",6,"tots"]];
+
+const G={
+ withDoses:true, musicMode:"gtr",
+ score:{N:0,E:0}, cames:{N:0,E:0},
+ dealer:3, maSeat:0, hands:[[],[],[],[]], played:[null,null,null,null],
+ trickWinners:[], leader:0, turn:0, baza:1,
+ truc:{val:1,level:-1,canRaise:null,pending:false},
+ envit:{open:true,accepted:false,val:0,level:-1,pending:false},
+ flashPlayer:false, flashMaria:false, mariaKnows:false,
+ inHand:false, matchOver:false,
+};
+
+/* ---------------- Helpers DOM ---------------- */
+const $=q=>document.querySelector(q);
+const el=(tag,cls,html)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e};
+function cardEl(c){
+ const d=el("div","card");
+ const imgData=window.CARD_IMG&&window.CARD_IMG[c.s+c.n];
+ if(imgData) d.innerHTML=`<img src="${imgData}" alt="${c.n}">`;
+ else d.innerHTML=cardSVG(c); // si falta cartas_data.js, cartes dibuixades
+ const pn=pecaName(c);if(pn)d.insertAdjacentHTML("beforeend",`<div class="peca">${pn}</div>`);
+ return d;
+}
+function setMsg(s){$("#msgLine").textContent=s}
+function toast(s,ms=1900){const tdiv=$("#toast");tdiv.textContent=s;tdiv.classList.remove("hidden");
+ clearTimeout(toast._t);toast._t=setTimeout(()=>tdiv.classList.add("hidden"),ms)}
+const BUBBLE_POS={0:{left:"50%",top:"88%"},1:{left:"72%",top:"36%"},2:{left:"50%",top:"17%"},3:{left:"28%",top:"36%"}};
+function bubble(seat,txt,shout){
+ const b=el("div","bubble"+(shout?" shout":""),txt);
+ const p=BUBBLE_POS[seat];b.style.left=p.left;b.style.top=p.top;
+ $("#tableInner").appendChild(b);setTimeout(()=>b.remove(),2400);
+}
+/* mazo de sobrants: cantó entre el repartidor i el jugador mà */
+const MAZO_POS={0:{l:"74%",t:"72%"},1:{l:"74%",t:"26%"},2:{l:"26%",t:"26%"},3:{l:"26%",t:"72%"}};
+function showModal(title,sub,btns){
+ $("#modalTitle").textContent=title;$("#modalSub").textContent=sub||"";
+ const box=$("#modalBtns");box.innerHTML="";
+ btns.forEach(([label,cls,fn])=>{const b=el("button",cls,label);
+   b.onclick=()=>{$("#modal").classList.add("hidden");fn()};box.appendChild(b)});
+ $("#modal").classList.remove("hidden");
+}
+/* decisions de joc SENSE tapar la taula: botons a la barra d'accions */
+function showPrompt(title,btns){
+ G.promptActive=true;
+ setMsg(title);
+ const a=$("#actions");a.innerHTML="";
+ btns.forEach(([label,cls,fn])=>{const b=el("button",cls||"",label);
+   b.onclick=()=>{G.promptActive=false;a.innerHTML="";fn()};a.appendChild(b)});
+}
+function showFlash(cards,txt,cb){
+ const o=$("#flashOverlay");o.innerHTML="";
+ o.appendChild(el("div","ftxt",txt));
+ const fc=el("div","fcards");cards.forEach(c=>fc.appendChild(cardEl(c)));o.appendChild(fc);
+ o.classList.remove("hidden");
+ setTimeout(()=>{o.classList.add("hidden");cb&&cb()},420); // ⚡ el flash: ~400 ms
+}
+
+/* ---------------- Render ---------------- */
+function renderScore(){
+ $("#ptsN").textContent=G.score.N;$("#ptsE").textContent=G.score.E;
+ $("#camN").textContent="🥂".repeat(G.cames.N)+"·".repeat(2-G.cames.N);
+ $("#camE").textContent="🥂".repeat(G.cames.E)+"·".repeat(2-G.cames.E);
+}
+function renderHand(clickable){
+ const h=$("#hand");h.innerHTML="";
+ G.hands[0].forEach((c,i)=>{
+   const d=cardEl(c);d.classList.add(clickable?"playable":"dim");
+   if(clickable)d.onclick=()=>playerPlays(i);
+   h.appendChild(d);
+ });
+}
+function renderTable(){
+ // ses cartes queden damunt sa taula: sa volta nova tapa s'anterior,
+ // però es veu un bocinet de sa carta de davall
+ for(let s=0;s<4;s++){
+   const slot=$("#slot"+s);slot.innerHTML="";
+   const stack=[];
+   (G.history||[]).forEach(b=>{if(b.cards[s])stack.push(b.cards[s])});
+   if(G.played[s])stack.push(G.played[s]);
+   stack.forEach((c,i)=>{
+     const d=cardEl(c);
+     const depth=stack.length-1-i; // 0 = sa de damunt
+     d.style.zIndex=10+i;
+     d.style.transform=`translate(${-depth*12}px,${-depth*16}px) rotate(${-depth*6}deg)`;
+     if(depth>0)d.style.filter="brightness(.9)";
+     slot.appendChild(d);
+   });
+ }
+ for(const s of[1,2,3]){
+   $("#pl"+s+" .ncards").textContent="🃏".repeat(G.hands[s].length);
+   $("#pl"+s).classList.toggle("turn",G.inHand&&G.turn===s);
+ }
+ // indicador de cama i basa
+ $("#phase").innerHTML="CAMA "+(G.cames.N+G.cames.E+1)+"<br>"+t("voltaLbl")+" "+G.baza+"/3";
+ // mazo de sobrants al costat del repartidor (marca qui és mà)
+ const m=$("#mazo"),p=MAZO_POS[G.dealer];
+ m.style.left=p.l;m.style.top=p.t;
+ m.innerHTML=G.inHand?'<div class="card back"></div><div class="card back"></div><div class="card back"></div>':"";
+}
+function renderActions(){
+ if(G.promptActive)return;
+ const a=$("#actions");a.innerHTML="";
+ if(!(G.inHand&&G.turn===0&&!G.truc.pending&&!G.envit.pending))return;
+ // Envit (només 1a basa i obert)
+ if(G.baza===1&&G.envit.open&&G.envit.level<0){
+   const b=el("button","atk",t("envit"));b.onclick=()=>{playerProposeEnvit(0)};a.appendChild(b);
+ }
+ // Truc / pujar
+ const lvl=G.truc.level+1;
+ if(lvl<TRUC_CHAIN.length&&(G.truc.canRaise===null||G.truc.canRaise==="N")){
+   const b=el("button","atk",t(TRUC_CHAIN[lvl][0]));b.onclick=()=>{playerProposeTruc(lvl)};a.appendChild(b);
+ }
+ // Fer senya
+ if(!G.flashPlayer){
+   const b=el("button","flash",t("fersenya"));b.onclick=playerSenya;a.appendChild(b);
+ }
+ // Senya d'envit a na Maria (abans que li toqui tirar)
+ if(G.baza===1&&G.envit.open&&G.envit.level<0&&!G.askEnvit&&!G.played[2]){
+   const b=el("button","flash",t("senyaEnvit"));
+   b.onclick=()=>{G.askEnvit=true;toast(t("senyaEnvitFeta"),1400);renderActions()};
+   a.appendChild(b);
+ }
+ // Me'n vaig
+ const mv=el("button","",t("menvaig"));mv.onclick=()=>{
+   showPrompt(t("menvaig")+"?",[[t("menvaig"),"atk",()=>concede("N")],["←","safe",()=>{renderActions()}]]);
+ };a.appendChild(mv);
+}
+
+/* ---------------- Punts ---------------- */
+function addPoints(team,pts){ // retorna true si s'ha acabat la cama
+ if(pts==="cama"){G.score[team]=24}
+ else G.score[team]=Math.min(24,G.score[team]+pts);
+ renderScore();
+ return G.score[team]>=24;
+}
+function faltaCap(p){ // l'envit mai supera el que li falta al que va davant
+ const rem=Math.min(24-G.score.N,24-G.score.E);
+ return p==="tots"?rem:Math.min(p,rem);
+}
+
+/* ---------------- Cicle: partida / cama / mà ---------------- */
+function startMatch(){
+ G.score={N:0,E:0};G.cames={N:0,E:0};G.matchOver=false;G.dealer=3;
+ // companys de taula nous a cada partida, cadascú amb es seu caràcter
+ const hs=POOL_HOMES.slice().sort(()=>Math.random()-.5);
+ NAMES[1]=hs[0];NAMES[3]=hs[1];
+ NAMES[2]=POOL_DONES[Math.floor(Math.random()*POOL_DONES.length)];
+ for(const s of[1,2,3])$("#pl"+s+" .pname").textContent=NAMES[s];
+ G.aggro=[1,.75+Math.random()*.55,.75+Math.random()*.55,.75+Math.random()*.55];
+ renderScore();startHand();
+}
+function startCamaWin(team){
+ G.cames[team]++;renderScore();
+ toast((team==="N"?t("camaGuanyada"):t("camaPerduda"))+" 🥂 "+G.cames.N+"–"+G.cames.E,2600);
+ if(G.cames[team]>=2){
+   G.matchOver=true;
+   setTimeout(()=>showModal(team==="N"?t("victoria"):t("derrota"),"",
+     [[t("novaPartida"),"atk",()=>{$("#scrGame").classList.add("hidden");$("#scrConfig").classList.remove("hidden")}]]),1900);
+   return;
+ }
+ G.score={N:0,E:0};renderScore();
+ setTimeout(startHand,2000);
+}
+function startHand(){
+ if(G.matchOver)return;
+ G.dealer=(G.dealer+1)%4;G.maSeat=(G.dealer+1)%4;
+ const deck=buildDeck(G.withDoses);
+ for(let i=deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]]}
+ for(let s=0;s<4;s++)G.hands[s]=deck.splice(0,3);
+ G.hands0snap=G.hands.map(h=>h.slice()); // còpia per resoldre l'envit al final
+ G.played=[null,null,null,null];G.trickWinners=[];G.baza=1;
+ G.truc={val:1,level:-1,canRaise:null,pending:false};
+ G.envit={open:true,accepted:false,val:0,level:-1,pending:false};
+ G.flashPlayer=false;G.flashMaria=false;G.mariaKnows=false;
+ G.askEnvit=false;G.history=[];
+ G.leader=G.maSeat;G.turn=G.maSeat;G.inHand=true;
+ setMsg(G.dealer===0?t("dealsTu"):NAMES[G.dealer]+" "+t("deals"));
+ renderTable();renderHand(false);renderActions();
+ // Na Maria pot fer-te senya al començament de la mà
+ const mr=Math.max(...G.hands[2].map(rank));
+ const willFlash=(mr>=8&&Math.random()<.6)||Math.random()<.12;
+ setTimeout(()=>{
+   if(willFlash){G.flashMaria=true;
+     showFlash(G.hands[2],t("mariaSenya"),()=>setTimeout(nextTurn,600));}
+   else nextTurn();
+ },1500);
+}
+
+/* ---------------- Torn de joc ---------------- */
+function nextTurn(){
+ if(!G.inHand||G.matchOver)return;
+ renderTable();
+ if(G.turn===0){setMsg(t("yourTurn")+(G.turn===G.maSeat?" ("+t("maTurn")+")":""));
+   renderHand(true);renderActions();}
+ else{setMsg(NAMES[G.turn]+"...");renderHand(false);renderActions();
+   setTimeout(()=>aiTurn(G.turn),1500+Math.random()*1100);}
+}
+function playerPlays(i){
+ if(!(G.inHand&&G.turn===0&&!G.truc.pending&&!G.envit.pending))return;
+ playCard(0,i);
+}
+function playCard(seat,idx){
+ const c=G.hands[seat].splice(idx,1)[0];
+ G.played[seat]=c;renderTable();renderHand(false);renderActions();
+ advanceAfterCard(seat);
+}
+function advanceAfterCard(seat){
+ const next=(seat+1)%4;
+ const cardsDown=G.played.filter(Boolean).length;
+ if(cardsDown===4){setTimeout(resolveTrick,1700)}
+ else{G.turn=next;setTimeout(nextTurn,750)}
+}
+function resolveTrick(){
+ if(G.baza===1)G.envit.open=false; // l'envit es tanca en acabar la 1a basa
+ const ranks=G.played.map(c=>rank(c));
+ const maxR=Math.max(...ranks);
+ const topSeats=[0,1,2,3].filter(s=>ranks[s]===maxR);
+ const topTeams=new Set(topSeats.map(teamOf));
+ let winnerTeam=null,winnerSeat=null;
+ if(topTeams.size===1){
+   winnerTeam=teamOf(topSeats[0]);
+   // dins de l'equip guanyador, el que ha jugat primer (des del leader)
+   for(let k=0;k<4;k++){const s=(G.leader+k)%4;if(topSeats.includes(s)){winnerSeat=s;break}}
+ }
+ G.trickWinners.push(winnerTeam);
+ G.history.push({cards:G.played.slice(),winner:winnerTeam});
+ if(winnerTeam){setMsg(winnerSeat===0?t("guanyaBasaTu"):NAMES[winnerSeat]+" "+t("guanyaBasa"));}
+ else{setMsg(t("parda"));toast(t("parda"),900)}
+ const outcome=handOutcome();
+ setTimeout(()=>{
+   G.played=[null,null,null,null];
+   if(outcome){endHand(outcome)}
+   else{
+     G.baza++;
+     G.leader=winnerSeat!==null?winnerSeat:G.leader; // simplificació pardes
+     G.turn=G.leader;renderTable();nextTurn();
+   }
+ },2700);
+}
+function handOutcome(){
+ const w=G.trickWinners,c={N:0,E:0};w.forEach(x=>x&&c[x]++);
+ if(c.N>=2)return"N";if(c.E>=2)return"E";
+ if(w.length===2){
+   if(w[0]===null&&w[1])return w[1];      // empat 1a: guanya qui mata la 2a
+   if(w[0]&&w[1]===null)return w[0];      // empat 2a: guanya qui guanyà la 1a
+   return null;
+ }
+ if(w.length===3){
+   if(c.N===0&&c.E===0)return teamOf(G.maSeat); // tres pardes: guanya el mà
+   if(c.N===1&&c.E===1)return w[0];             // 1-1 i empat 3a: guanya la 1a
+   return c.N===1?"N":"E";
+ }
+ return null;
+}
+
+/* ---------------- Final de mà ---------------- */
+function endHand(winnerTeam){
+ G.inHand=false;renderActions();
+ setMsg(winnerTeam==="N"?t("guanyaMaN"):t("ells")+" "+t("guanyaMa"));
+ // 1r: envit, 2n: truc
+ let camaDone=resolveEnvitAtEnd();
+ if(!camaDone){
+   const v=G.truc.val;
+   if(v==="cama"){startCamaWin(winnerTeam);return}
+   camaDone=addPoints(winnerTeam,v);
+   if(camaDone){startCamaWin(winnerTeam);return}
+ } else return;
+ setTimeout(startHand,2600);
+}
+function resolveEnvitAtEnd(){
+ if(!G.envit.accepted)return false;
+ const evN=Math.max(envitValue(G.hands0snap[0]),envitValue(G.hands0snap[2]));
+ const evE=Math.max(envitValue(G.hands0snap[1]),envitValue(G.hands0snap[3]));
+ let winner;
+ if(evN===evE){ // empat: guanya l'equip del jugador mà (per ordre de lloc)
+   winner=teamOf(G.maSeat);
+ } else winner=evN>evE?"N":"E";
+ let pts=G.envit.val;
+ if(pts==="tots"){const lead=G.score.N>=G.score.E?"N":"E";pts=24-G.score[lead]}
+ pts=faltaCap(pts);
+ toast((winner==="N"?t("guanyamEnvit"):t("ells")+" "+t("guanyenEnvit"))+": "+evN+" vs "+evE+" (+"+pts+")",2800);
+ const done=addPoints(winner,pts);
+ if(done){setTimeout(()=>startCamaWin(winner),800);return true}
+ return false;
+}
+function concede(team){ // me'n vaig
+ if(!G.inHand)return;G.inHand=false;
+ const other=otherTeam(team);
+ bubble(team==="N"?0:1,t("menvaig"));
+ setMsg(team==="N"?t("abandonenN"):t("ells")+" "+t("abandonen"));
+ setTimeout(()=>{
+   let camaDone=resolveEnvitAtEnd();
+   if(!camaDone){
+     const v=G.truc.val==="cama"?"cama":G.truc.val;
+     if(v==="cama"){startCamaWin(other);return}
+     camaDone=addPoints(other,v);
+     if(camaDone){startCamaWin(other);return}
+   } else return;
+   setTimeout(startHand,2300);
+ },1400);
+}
+
+/* ====================================================================
+   APOSTES — TRUC
+   ==================================================================== */
+function playerProposeTruc(lvl){proposeTruc("N",0,lvl)}
+function proposeTruc(team,proposerSeat,lvl){
+ G.truc.pending=true;renderActions();
+ const seat=proposerSeat;
+ bubble(seat,t(TRUC_CHAIN[lvl][0]),true);
+ setMsg((seat===0?t("you"):NAMES[seat])+" "+t("diu")+": "+t(TRUC_CHAIN[lvl][0]));
+ const responder=otherTeam(team);
+ setTimeout(()=>{
+   if(responder==="N")playerRespondTruc(lvl,team);
+   else aiRespondTruc(lvl,team);
+ },1500);
+}
+function acceptTruc(lvl,callerTeam,accSeat){
+ G.truc.level=lvl;G.truc.val=TRUC_CHAIN[lvl][2];
+ G.truc.canRaise=otherTeam(callerTeam); // qui accepta té el dret de pujar
+ G.truc.pending=false;
+ bubble(accSeat,t("vull"));
+ setTimeout(()=>{nextTurn()},1300);
+}
+function rejectTruc(lvl,callerTeam,rejSeat){
+ G.truc.pending=false;G.inHand=false;
+ bubble(rejSeat,t("novull"));
+ setMsg(t("noVolen"));
+ setTimeout(()=>{
+   let camaDone=resolveEnvitAtEnd();
+   if(!camaDone){
+     const pts=TRUC_CHAIN[lvl][1];
+     camaDone=addPoints(callerTeam,pts);
+     if(camaDone){startCamaWin(callerTeam);return}
+   } else return;
+   setTimeout(startHand,2300);
+ },1400);
+}
+function playerRespondTruc(lvl,callerTeam){
+ const btns=[];
+ const nxt=lvl+1;
+ btns.push([t("vull"),"safe",()=>acceptTruc(lvl,callerTeam,0)]);
+ if(nxt<TRUC_CHAIN.length)
+   btns.push([t(TRUC_CHAIN[nxt][0]),"atk",()=>proposeTruc("N",0,nxt)]);
+ if(G.baza===1&&G.envit.open&&G.envit.level<0)
+   btns.push([t("envit")+"!","atk",()=>{
+     G.pendingTrucAfterEnvit={lvl,callerTeam};playerProposeEnvit(0);
+   }]);
+ btns.push([t("novull"),"",()=>rejectTruc(lvl,callerTeam,0)]);
+ // consens de parella: na Maria opina amb un gest, tu tens sa darrera paraula
+ const stM=handStrength(G.hands0snap[2]);
+ const opinio=stM>=30?t("mariaVol"):stM>=20?t("mariaDubta"):t("mariaNo");
+ bubble(2,stM>=30?"😏":stM>=20?"🤷":"😬");
+ showPrompt(t("trucPregunta")+" "+(TRUC_CHAIN[lvl][2]==="cama"?t("cama"):TRUC_CHAIN[lvl][2]+" "+t("punts"))+" · "+opinio,btns);
+}
+function aiRespondTruc(lvl,callerTeam){
+ // només es crida quan responen els rivals (equip E: Toni i Biel)
+ const stToni=handStrength(G.hands0snap[1]),stBiel=handStrength(G.hands0snap[3]);
+ const st=Math.max(stToni,stBiel);
+ const respSeat=stToni>=stBiel?1:3;
+ const stake=TRUC_CHAIN[lvl][2];
+ const nxt=lvl+1;
+ const farol=Math.random()<.07;
+ const agR=G.aggro?G.aggro[respSeat]:1;
+ if((st>36||farol)&&nxt<TRUC_CHAIN.length&&Math.random()<.35*agR){proposeTruc("E",respSeat,nxt);return}
+ // accepten sovint, però sense suïcidar-se
+ const threshold=stake==="cama"?37:(25+lvl*3);
+ if(st>threshold-(agR-1)*12-Math.random()*7)acceptTruc(lvl,callerTeam,respSeat);
+ else rejectTruc(lvl,callerTeam,respSeat);
+}
+
+/* ====================================================================
+   APOSTES — ENVIT
+   ==================================================================== */
+function playerProposeEnvit(lvlIdx){proposeEnvit("N",0,Math.max(0,G.envit.level+1))}
+function proposeEnvit(team,seat,lvl){
+ G.envit.pending=true;renderActions();
+ bubble(seat,t(ENVIT_CHAIN[lvl][0]),true);
+ setMsg((seat===0?t("you"):NAMES[seat])+" "+t("diu")+": "+t(ENVIT_CHAIN[lvl][0]));
+ const responder=otherTeam(team);
+ setTimeout(()=>{
+   if(responder==="N")playerRespondEnvit(lvl,team);
+   else aiRespondEnvit(lvl,team);
+ },1500);
+}
+function acceptEnvit(lvl,callerTeam,accSeat){
+ G.envit.level=lvl;G.envit.val=ENVIT_CHAIN[lvl][2];G.envit.accepted=true;G.envit.pending=false;
+ bubble(accSeat,t("vull"));
+ finishEnvitPhase();
+}
+function rejectEnvit(lvl,callerTeam,rejSeat){
+ G.envit.pending=false;G.envit.open=false;
+ bubble(rejSeat,t("novull"));
+ const pts=faltaCap(ENVIT_CHAIN[lvl][1]);
+ const done=addPoints(callerTeam,pts);
+ if(done){G.inHand=false;setTimeout(()=>startCamaWin(callerTeam),800);return}
+ finishEnvitPhase();
+}
+function finishEnvitPhase(){
+ // si hi havia un truc pendent de resposta, el reprenem
+ const p=G.pendingTrucAfterEnvit;
+ if(p){G.pendingTrucAfterEnvit=null;setTimeout(()=>playerRespondTruc(p.lvl,p.callerTeam),1200);return}
+ setTimeout(nextTurn,1100);
+}
+function playerRespondEnvit(lvl,callerTeam){
+ const btns=[];
+ btns.push([t("vull"),"safe",()=>acceptEnvit(lvl,callerTeam,0)]);
+ const nxt=lvl+1;
+ if(nxt<ENVIT_CHAIN.length)btns.push([t(ENVIT_CHAIN[nxt][0]),"atk",()=>proposeEnvit("N",0,nxt)]);
+ if(nxt+1<ENVIT_CHAIN.length)btns.push([t("tots"),"atk",()=>proposeEnvit("N",0,ENVIT_CHAIN.length-1)]);
+ btns.push([t("novull"),"",()=>rejectEnvit(lvl,callerTeam,0)]);
+ // consens de parella: gest de na Maria segons el seu lligat (sense dir el número!)
+ const evM=envitValue(G.hands0snap[2]);
+ bubble(2,evM>=30?"😏":evM>=26?"🤷":"😬");
+ const opinio=evM>=30?t("mariaVol"):evM>=26?t("mariaDubta"):t("mariaNo");
+ showPrompt(t("envitPregunta")+" "+(ENVIT_CHAIN[lvl][2]==="tots"?t("tots"):ENVIT_CHAIN[lvl][2]+" "+t("punts"))
+   +" — "+t("lligatTeu")+": "+envitValue(G.hands0snap[0])+" · "+opinio,btns);
+}
+function aiRespondEnvit(lvl,callerTeam){
+ const seats=[1,3];
+ const ev=Math.max(...seats.map(s=>envitValue(G.hands0snap[s])));
+ const respSeat=envitValue(G.hands0snap[1])>=envitValue(G.hands0snap[3])?1:3;
+ const nxt=lvl+1;
+ const agR=G.aggro?G.aggro[respSeat]:1;
+ if(ev>=32&&nxt<ENVIT_CHAIN.length&&Math.random()<.45*agR){proposeEnvit("E",respSeat,nxt);return}
+ const threshold=28+lvl*2;
+ if(ev>threshold-(agR-1)*8-Math.random()*4||Math.random()<.06*agR)acceptEnvit(lvl,callerTeam,respSeat);
+ else rejectEnvit(lvl,callerTeam,respSeat);
+}
+
+/* ====================================================================
+   IA — torn de joc
+   ==================================================================== */
+function aiTurn(seat){
+ if(!G.inHand||G.matchOver||G.truc.pending||G.envit.pending)return;
+ const team=teamOf(seat);
+ const hand=G.hands[seat];
+ const st=handStrength(G.hands0snap[seat]);
+ const ag=G.aggro?G.aggro[seat]:1; // caràcter del jugador (canvia a cada partida)
+ // 1) envit? (només 1a volta)
+ if(G.baza===1&&G.envit.open&&G.envit.level<0){
+   // sa companya obeeix sa senya d'envit
+   if(seat===2&&G.askEnvit){G.askEnvit=false;proposeEnvit(team,seat,0);return}
+   let ev=envitValue(G.hands0snap[seat]);
+   if(seat===2&&G.mariaKnows)ev=Math.max(ev,envitValue(G.hands0snap[0]));
+   // lo normal és que envidin es 3r o 4t de sa volta; es primers només
+   // si duen peça grossa (amo/madona) que lliga amb tot i l'hauran de tirar
+   const pos=(seat-G.leader+4)%4;
+   const pecaGrossa=G.hands0snap[seat].some(c=>isAmo(c)||isMadona(c));
+   const posFactor=pos>=2?1:(pecaGrossa?0.8:0.08);
+   if(ev>=29&&Math.random()<.7*posFactor*ag||Math.random()<.04*posFactor*ag){proposeEnvit(team,seat,0);return}
+ }
+ // 2) truc?
+ const lvl=G.truc.level+1;
+ const canRaise=(G.truc.canRaise===null||G.truc.canRaise===team)&&lvl<TRUC_CHAIN.length;
+ if(canRaise){
+   let s2=st;
+   if(seat===2&&G.mariaKnows)s2=Math.max(s2,handStrength(G.hands0snap[0]));
+   const wantLvl=lvl===0?33:37+lvl*2;
+   // trucar més tard (a 2a/3a volta) és més habitual: així es juguen les tres voltes
+   const lateBonus=G.baza>=2?0.25:0;
+   if((s2>wantLvl&&Math.random()<(.25+lateBonus)*ag)||Math.random()<.03*ag){proposeTruc(team,seat,lvl);return}
+ }
+ // 3) jugar carta
+ const idx=aiChooseCard(seat);
+ playCard(seat,idx);
+}
+function aiChooseCard(seat){
+ const hand=G.hands[seat];
+ const onTable=G.played.filter(Boolean);
+ const byRank=hand.map((c,i)=>({i,r:rank(c)})).sort((a,b)=>a.r-b.r);
+ if(onTable.length===0){ // obre la basa
+   if(Math.random()<.35)return byRank[byRank.length-1].i; // pitja!
+   return byRank[Math.floor(byRank.length/2)].i;
+ }
+ const maxTable=Math.max(...G.played.map(c=>c?rank(c):0));
+ // el company ja guanya? tira fluixa ("vine a mi")
+ const partner=(seat+2)%4;
+ const partnerWins=G.played[partner]&&rank(G.played[partner])===maxTable
+   &&!G.played.some((c,s)=>c&&teamOf(s)!==teamOf(seat)&&rank(c)===maxTable);
+ if(partnerWins)return byRank[0].i;
+ // mata amb la carta més baixa possible
+ const killer=byRank.find(x=>x.r>maxTable);
+ if(killer)return killer.i;
+ // empata si pot (qui no mata empata!)
+ const tie=byRank.find(x=>x.r===maxTable);
+ if(tie)return tie.i;
+ return byRank[0].i;
+}
+
+/* ---------------- Senya del jugador (flash a na Maria) ---------------- */
+function playerSenya(){
+ if(G.flashPlayer)return;
+ G.flashPlayer=true;G.mariaKnows=true;
+ toast(t("senyaFeta"),1100);
+ renderActions();
+}
+
+/* ====================================================================
+   MÚSICA — guitarreta sintetitzada (Web Audio)
+   ==================================================================== */
+let AC=null,musicTimer=null,musicOn=false,masterGain=null;
+/* Guitarra de veritat: síntesi Karplus-Strong (corda polsada) */
+const KS_CACHE={};
+function ksBuffer(freq){
+ const key=Math.round(freq*10);
+ if(KS_CACHE[key])return KS_CACHE[key];
+ const sr=AC.sampleRate,dur=1.6,N=Math.round(sr/freq);
+ const buf=AC.createBuffer(1,Math.floor(sr*dur),sr),d=buf.getChannelData(0);
+ for(let i=0;i<N;i++)d[i]=Math.random()*2-1;
+ for(let i=N;i<d.length;i++)d[i]=0.996*0.5*(d[i-N]+d[i-N+1]);
+ KS_CACHE[key]=buf;return buf;
+}
+function pluck(freq,when,vol){
+ const src=AC.createBufferSource();src.buffer=ksBuffer(freq);
+ const g=AC.createGain();g.gain.value=vol;
+ src.connect(g);g.connect(masterGain);
+ src.start(when);
+}
+/* cadència andalusa Am — G — F — E, arpegi tranquil de taverna */
+const BARS=[
+ [110.00,220.00,261.63,329.63,261.63,220.00], // Am
+ [ 98.00,196.00,246.94,293.66,246.94,196.00], // G
+ [ 87.31,174.61,220.00,261.63,220.00,174.61], // F
+ [ 82.41,164.81,207.65,246.94,207.65,164.81], // E
+];
+let nextChordTime=0,chordIdx=0;
+function musicLoop(){
+ if(!musicOn)return;
+ const NOTE=0.27,LOOKAHEAD=0.8;
+ while(nextChordTime<AC.currentTime+LOOKAHEAD){
+   const bar=BARS[chordIdx%BARS.length];
+   bar.forEach((f,k)=>pluck(f,nextChordTime+k*NOTE,k===0?0.30:0.16));
+   nextChordTime+=6*NOTE;chordIdx++;
+ }
+}
+/* Cançons oficials de Joana Pons a YouTube (canal del segell):
+   Romanç de na Cecília + Menorca (amb ses guitarres) + Menorca (Del Folk al Pop) */
+const JP_VIDEOS=["iu0Zt-BtH0M","AebXCIEO7ww","AX6ysLLWAgY"];
+function setMusic(mode){ // "gtr" | "jp" | "off"
+ G.musicMode=mode;
+ $("#btnMusic").textContent=mode==="gtr"?"🎸":mode==="jp"?"🎵":"🔇";
+ $("#btnMusic").style.opacity=mode==="off"?.45:1;
+ // guitarreta sintetitzada
+ if(mode==="gtr"){
+   if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();
+     masterGain=AC.createGain();masterGain.gain.value=0.5;
+     const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=3200;
+     masterGain.connect(lp);lp.connect(AC.destination);}
+   AC.resume();musicOn=true;nextChordTime=Math.max(nextChordTime,AC.currentTime+0.1);
+   if(!musicTimer)musicTimer=setInterval(musicLoop,200);
+ }else{musicOn=false}
+ // Joana Pons: si el joc està publicat a una web (http/https) el mini-reproductor
+ // funciona incrustat; des d'un fitxer local YouTube el bloqueja (error 153)
+ // i l'obrim en una altra pestanya perquè soni de fons.
+ const hosted=location.protocol.startsWith("http");
+ const ex=document.getElementById("ytPlayer");
+ if(mode==="jp"){
+   if(hosted){
+     if(!ex){
+       const d=document.createElement("div");d.id="ytPlayer";
+       d.innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${JP_VIDEOS[0]}?playlist=${JP_VIDEOS.slice(1).join(",")},${JP_VIDEOS[0]}&autoplay=1&loop=1" allow="autoplay; encrypted-media" allowfullscreen title="Joana Pons"></iframe>`;
+       document.body.appendChild(d);
+     }
+   }else{
+     window.open("https://www.youtube.com/watch_videos?video_ids="+JP_VIDEOS.join(","),"_blank");
+   }
+ }else if(ex)ex.remove();
+}
+
+/* ====================================================================
+   PANTALLA DE CONFIGURACIÓ
+   ==================================================================== */
+function applyLang(){
+ $("#cfgSubtitle").textContent=t("subtitle");
+ $("#lblLang").textContent=t("lang");
+ $("#lblDoses").textContent=t("doses");
+ $("#btnDosesSi").textContent=t("dosesSi");$("#btnDosesNo").textContent=t("dosesNo");
+ $("#lblMusic").textContent=t("music");
+ $("#btnMusicGtr").textContent=t("musicGtr");$("#btnMusicJp").textContent=t("musicJp");
+ $("#btnMusicOff").textContent=t("musicOff");
+ $("#cfgNote").textContent=t("note");
+ $("#btnStart").textContent=t("start");
+ $("#lblNoltros").textContent=t("noltros");$("#lblElls").textContent=t("ells");
+}
+function segInit(id,fn){
+ const seg=$(id);
+ seg.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+   seg.querySelectorAll("button").forEach(x=>x.classList.remove("on"));
+   b.classList.add("on");fn(b.dataset.v);
+ });
+}
+segInit("#segLang",v=>{LANG=v;applyLang()});
+segInit("#segDoses",v=>{G.withDoses=v==="1"});
+segInit("#segMusic",v=>setMusic(v));
+$("#btnStart").onclick=()=>{
+ $("#scrConfig").classList.add("hidden");$("#scrGame").classList.remove("hidden");
+ setMusic(G.musicMode||"gtr");
+ startMatch();
+};
+$("#btnMusic").onclick=()=>{ // alterna guitarreta/silenci (Joana Pons es tria a l'inici)
+ setMusic(G.musicMode==="gtr"?"off":"gtr");
+};
+
+/* ---------------- Init art ---------------- */
+document.querySelectorAll(".avatar").forEach(a=>a.innerHTML=avatarSVG(a.dataset.av));
+$("#ginWrap").innerHTML=GIN_SVG;
+$("#cfgGin").innerHTML=GIN_SVG;
+$("#barScene").innerHTML=BAR_SVG;
+applyLang();
+
+/* ---------------- Baralla real: es descarrega de Wikimedia en obrir ----------------
+   (CC BY-SA 3.0, Basquetteur). Si no hi ha internet ni cartas_data.js,
+   es fan servir les cartes SVG dibuixades. */
+(async function loadDeckImages(){
+ if(window.CARD_IMG&&window.CARD_IMG.O1)return; // ja les tenim (cartas_data.js)
+ try{
+  const img=new Image();img.crossOrigin="anonymous";
+  img.src="https://upload.wikimedia.org/wikipedia/commons/e/e0/Baraja_espa%C3%B1ola_completa.png";
+  await img.decode();
+  const PX=208,PY=319,ROWS={O:0,C:1,E:2,B:3};
+  const crop=(s,col)=>{
+    const cv=document.createElement("canvas");cv.width=146;cv.height=224;
+    cv.getContext("2d").drawImage(img,col*PX,ROWS[s]*PY,PX,PY,0,0,146,224);
+    return cv.toDataURL("image/webp",0.8);
+  };
+  window.CARD_IMG=window.CARD_IMG||{};
+  for(const s of["O","C","E","B"])for(let n=1;n<=7;n++)window.CARD_IMG[s+n]=crop(s,n-1);
+  window.CARD_IMG["B11"]=crop("B",10); // l'amo
+  window.CARD_IMG["O10"]=crop("O",9);  // sa madona
+  // refrescar el que hi hagi en pantalla
+  if(G.inHand){renderTable();renderHand(G.turn===0&&!G.promptActive)}
+ }catch(e){/* sense connexió: cartes SVG de respatler */}
+})();
+</script>
+</body>
+</html>
