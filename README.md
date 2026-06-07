@@ -2,7 +2,7 @@
 
 **v1.0** — Joc de cartes tradicional de Menorca per jugar al mòbil o a l'ordinador, directament al navegador. Sense instal·lar res: un fitxer HTML i au.
 
-🎮 **[Jugar-hi ara](https://JOANSERRA.github.io/truc-menorqui/)** *(canvia JOANSERRA pel teu usuari de GitHub)*
+🎮 **[Jugar-hi ara](https://joanserramiret.github.io/truc-menorqui/)**
 
 ## Què és es truc?
 
