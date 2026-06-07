@@ -154,10 +154,10 @@ h1.logo span{color:#fff;text-shadow:4px 4px 0 var(--ink),8px 8px 0 rgba(0,0,0,.2
 
 /* player hand */
 #handArea{display:flex;flex-direction:column;align-items:center;gap:8px;padding:6px 8px 14px;z-index:20;width:100%}
-/* barra d'accions d'alçada FIXA: mai mou la taula ni les cartes */
-#actions{display:flex;gap:6px;flex-wrap:nowrap;justify-content:center;align-items:center;
-  height:54px;max-width:100vw;overflow-x:auto}
-#actions button{font-size:14px;padding:8px 10px;background:var(--paper);white-space:nowrap;flex-shrink:0}
+/* barra d'accions: mínim fix, però amb moltes opcions fa dues files (tot visible!) */
+#actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center;
+  min-height:54px;max-width:100vw}
+#actions button{font-size:14px;padding:8px 10px;background:var(--paper);white-space:nowrap}
 #actions button.atk{background:var(--red);color:#fff}
 #actions button.flash{background:var(--gold2)}
 #hand{display:flex;gap:10px}
@@ -167,9 +167,7 @@ h1.logo span{color:#fff;text-shadow:4px 4px 0 var(--ink),8px 8px 0 rgba(0,0,0,.2
 #hand .card.playable:active{transform:translateY(-12px)}
 #hand .card.dim{opacity:.45}
 
-/* ---------- Gin bottle on the table ---------- */
-#ginWrap{position:absolute;left:67%;top:66%;width:52px;z-index:6;transform:translate(-50%,-50%) rotate(3deg);
-  filter:drop-shadow(3px 4px 0 rgba(0,0,0,.3))}
+/* (es gin ara és a sa prestatgeria des bar: damunt sa taula tapava ses cartes) */
 
 /* ---------- Flash overlay (senyes) ---------- */
 #flashOverlay{position:fixed;inset:0;background:rgba(255,255,255,.65);z-index:90;display:flex;
@@ -277,14 +275,16 @@ button,.card{touch-action:manipulation} /* sense zoom accidental amb dits ràpid
       <div id="phase" style="font-size:10px;text-align:center;line-height:1.2">⚔</div>
       <div class="scTeam"><span id="lblElls">ELLS</span><span class="pts" id="ptsE">0</span><span class="cames" id="camE"></span></div>
     </div>
-    <button id="btnMusic">🎸</button>
+    <div style="display:flex;gap:6px">
+      <button id="btnHelp">🤫</button>
+      <button id="btnMusic">🎸</button>
+    </div>
   </div>
   <div id="msgLine">&nbsp;</div>
 
   <div id="tableArea">
    <div id="tableInner">
     <div id="mesa"></div>
-    <div id="ginWrap"></div>
     <div id="mazo"></div>
     <div class="slot" id="slot0"></div>
     <div class="slot" id="slot1"></div>
@@ -333,8 +333,14 @@ const T = {
   you:"Tu", deals:"reparteix", yourTurn:"Et toca tirar!", maTurn:"ets mà",
   truc:"TRUC!", retruc:"RETRUC!", valnou:"VAL NOU!", cama:"CAMA!",
   envit:"ENVIT!", joenvit:"JO ENVIT!", dosmes:"DOS MÉS!", tots:"TOTS!",
-  vull:"Vull!", novull:"No vull", menvaig:"Me'n vaig", fersenya:"⚡ Fer senya",
+  vull:"Vull!", novull:"No vull", menvaig:"Me'n vaig", fersenya:"🤫 Fer senya",
   senyaEnvit:"👍 Envida-li!", senyaEnvitFeta:"Senya feta: na {M} envidarà",
+  vineAMi:"Vine a mi!", pitja:"Pitja!",
+  gAmo:"es mossega es llavi de baix", gMadona:"alça ses celles",
+  gEspaseta:"fa s'ullet dret", gBastet:"fa s'ullet esquerre",
+  gManE:"treu sa llengua cap a sa dreta", gManO:"treu sa llengua cap a s'esquerra",
+  gTres:"pitja sa galta amb sa llengua", gRes:"acluca ets ulls",
+  senyesTitle:"Ses senyes (codi de llevant)", senyesOk:"Entesos!",
   mariaVol:"na {M} fa que sí amb es cap", mariaDubta:"na {M} arronsa ses espatlles", mariaNo:"na {M} fa mala cara",
   diu:"diu", responType:"Què respons?", trucPregunta:"truquen a", envitPregunta:"enviden a",
   guanyaBasa:"guanya sa volta", guanyaBasaTu:"Guanyes sa volta!", parda:"Volta parda!",
@@ -356,8 +362,14 @@ const T = {
   you:"Tú", deals:"reparte", yourTurn:"¡Te toca tirar!", maTurn:"eres mà",
   truc:"TRUC!", retruc:"RETRUC!", valnou:"VAL NOU!", cama:"CAMA!",
   envit:"ENVIT!", joenvit:"JO ENVIT!", dosmes:"DOS MÉS!", tots:"TOTS!",
-  vull:"¡Vull!", novull:"No vull", menvaig:"Me'n vaig", fersenya:"⚡ Hacer seña",
+  vull:"¡Vull!", novull:"No vull", menvaig:"Me'n vaig", fersenya:"🤫 Hacer seña",
   senyaEnvit:"👍 ¡Que envide!", senyaEnvitFeta:"Seña hecha: {M} envidará",
+  vineAMi:"¡Vine a mi!", pitja:"¡Pitja!",
+  gAmo:"se muerde el labio de abajo", gMadona:"alza las cejas",
+  gEspaseta:"guiña el ojo derecho", gBastet:"guiña el ojo izquierdo",
+  gManE:"saca la lengua a la derecha", gManO:"saca la lengua a la izquierda",
+  gTres:"aprieta la mejilla con la lengua", gRes:"cierra los ojos",
+  senyesTitle:"Las señas (código de llevant)", senyesOk:"¡Entendido!",
   mariaVol:"{M} asiente con la cabeza", mariaDubta:"{M} se encoge de hombros", mariaNo:"{M} pone mala cara",
   diu:"dice", responType:"¿Qué respondes?", trucPregunta:"os trucan a", envitPregunta:"os envidan a",
   guanyaBasa:"gana la baza", guanyaBasaTu:"¡Ganas la baza!", parda:"¡Baza parda!",
@@ -572,11 +584,14 @@ const BAR_SVG=`<svg viewBox="0 0 420 740" preserveAspectRatio="xMidYMid slice">
    <path d="M209 186 q18 8 0 22" fill="#fbf6e8" stroke="#22201a" stroke-width="2"/>
   </g>
  </g>
- <!-- prestatge amb botelles -->
+ <!-- prestatge amb botelles: sa primera, es gin Xoriguer amb sa seva copeta -->
  <g>
-  <rect x="10" y="300" width="104" height="8" fill="#7c5f38" stroke="#22201a" stroke-width="2.6"/>
-  <path d="M20 300 v-34 q0 -5 4 -5 h6 q4 0 4 5 v34 z" fill="#41604a" stroke="#22201a" stroke-width="2.2"/>
-  <rect x="24" y="252" width="6" height="12" fill="#41604a" stroke="#22201a" stroke-width="1.8"/>
+  <rect x="10" y="300" width="116" height="8" fill="#7c5f38" stroke="#22201a" stroke-width="2.6"/>
+  <path d="M16 300 v-46 q0 -6 5 -6 h9 q5 0 5 6 v46 z" fill="#2e5a3e" stroke="#22201a" stroke-width="2.4"/>
+  <rect x="22" y="234" width="8" height="16" rx="2" fill="#b59a55" stroke="#22201a" stroke-width="1.8"/>
+  <rect x="18" y="270" width="15" height="20" rx="2" fill="#f3e9cf" stroke="#22201a" stroke-width="1.6"/>
+  <path d="M25.5 274 l-3.5 7 h7 z M25.5 281 v5" stroke="#b5483a" stroke-width="1.4" fill="none"/>
+  <path d="M38 300 l2 -9 h7 l2 9 z" fill="#dff3e0" stroke="#22201a" stroke-width="1.6"/>
   <path d="M44 300 v-28 q0 -5 4 -5 h6 q4 0 4 5 v28 z" fill="#a9743c" stroke="#22201a" stroke-width="2.2"/>
   <rect x="48" y="258" width="6" height="11" fill="#a9743c" stroke="#22201a" stroke-width="1.8"/>
   <path d="M68 300 v-32 q0 -5 4 -5 h6 q4 0 4 5 v32 z" fill="#cfd8d2" stroke="#22201a" stroke-width="2.2"/>
@@ -792,7 +807,14 @@ function renderActions(){
  if(lvl<TRUC_CHAIN.length&&(G.truc.canRaise===null||G.truc.canRaise==="N")){
    const b=el("button","atk",t(TRUC_CHAIN[lvl][0]));b.onclick=()=>{playerProposeTruc(lvl)};a.appendChild(b);
  }
- // Fer senya
+ // Vine a mi / Pitja: ordres de taula a sa companya (es diuen en veu alta!)
+ if(!G.played[2]&&G.hands[2].length>0&&!G.partnerHint){
+   const v=el("button","",t("vineAMi"));
+   v.onclick=()=>{G.partnerHint="low";bubble(0,t("vineAMi"),true);renderActions()};a.appendChild(v);
+   const p2=el("button","",t("pitja"));
+   p2.onclick=()=>{G.partnerHint="high";bubble(0,t("pitja"),true);renderActions()};a.appendChild(p2);
+ }
+ // Fer senya (es gest de sa teva millor peça)
  if(!G.flashPlayer){
    const b=el("button","flash",t("fersenya"));b.onclick=playerSenya;a.appendChild(b);
  }
@@ -857,15 +879,30 @@ function startHand(){
  G.askEnvit=false;G.history=[];
  G.leader=G.maSeat;G.turn=G.maSeat;G.inHand=true;
  setMsg(G.dealer===0?t("dealsTu"):NAMES[G.dealer]+" "+t("deals"));
+ G.partnerHint=null;
  renderTable();renderHand(false);renderActions();
- // Na Maria pot fer-te senya al començament de la mà
- const mr=Math.max(...G.hands[2].map(rank));
- const willFlash=(mr>=8&&Math.random()<.6)||Math.random()<.12;
+ // sa companya fa sa senya de sa seva millor peça, com a sa taula:
+ // un gest que has de saber llegir (botó 🤫 per repassar es codi)
+ const sy=senyaForHand(G.hands[2]);
+ const willSenya=sy.rank>=7?Math.random()<.7:Math.random()<.3;
  setTimeout(()=>{
-   if(willFlash){G.flashMaria=true;
-     showFlash(G.hands[2],t("mariaSenya"),()=>setTimeout(nextTurn,600));}
+   if(willSenya){G.flashMaria=true;
+     bubble(2,sy.e+" "+t(sy.k));
+     setMsg((LANG==="ca"?"Na ":"")+NAMES[2]+" "+t(sy.k)+"...");
+     setTimeout(nextTurn,1700);}
    else nextTurn();
  },1500);
+}
+/* sa senya tradicional que toca per sa millor peça de sa mà (codi de llevant) */
+function senyaForHand(hand){
+ if(hand.some(isAmo))return{e:"👄",k:"gAmo",rank:13};
+ if(hand.some(isMadona))return{e:"🤨",k:"gMadona",rank:12};
+ if(hand.some(c=>c.s==="E"&&c.n===1))return{e:"😉",k:"gEspaseta",rank:11};
+ if(hand.some(c=>c.s==="B"&&c.n===1))return{e:"😉",k:"gBastet",rank:10};
+ if(hand.some(c=>c.s==="E"&&c.n===7))return{e:"😛",k:"gManE",rank:9};
+ if(hand.some(c=>c.s==="O"&&c.n===7))return{e:"😛",k:"gManO",rank:8};
+ if(hand.some(c=>c.n===3))return{e:"😏",k:"gTres",rank:7};
+ return{e:"😑",k:"gRes",rank:0};
 }
 
 /* ---------------- Torn de joc ---------------- */
@@ -893,7 +930,8 @@ function advanceAfterCard(seat){
  else{G.turn=next;setTimeout(nextTurn,750)}
 }
 function resolveTrick(){
- if(G.baza===1)G.envit.open=false; // l'envit es tanca en acabar la 1a basa
+ G.partnerHint=null; // ses ordres de taula només valen per sa volta en curs
+ if(G.baza===1)G.envit.open=false; // l'envit es tanca en acabar la 1a volta
  const ranks=G.played.map(c=>rank(c));
  const maxR=Math.max(...ranks);
  const topSeats=[0,1,2,3].filter(s=>ranks[s]===maxR);
@@ -1151,6 +1189,14 @@ function aiChooseCard(seat){
  const hand=G.hands[seat];
  const onTable=G.played.filter(Boolean);
  const byRank=hand.map((c,i)=>({i,r:rank(c)})).sort((a,b)=>a.r-b.r);
+ // sa companya obeeix es "vine a mi" / "pitja" des company
+ if(seat===2&&G.partnerHint){
+   const h=G.partnerHint;G.partnerHint=null;
+   if(h==="low")return byRank[0].i;
+   const maxT=Math.max(0,...G.played.map(c=>c?rank(c):0));
+   const killer=byRank.find(x=>x.r>maxT);
+   return killer?killer.i:byRank[byRank.length-1].i;
+ }
  if(onTable.length===0){ // obre la basa
    if(Math.random()<.35)return byRank[byRank.length-1].i; // pitja!
    return byRank[Math.floor(byRank.length/2)].i;
@@ -1170,12 +1216,29 @@ function aiChooseCard(seat){
  return byRank[0].i;
 }
 
-/* ---------------- Senya del jugador (flash a na Maria) ---------------- */
+/* ---------------- Senya del jugador: fa es gest de sa seva millor peça ---------------- */
 function playerSenya(){
  if(G.flashPlayer)return;
  G.flashPlayer=true;G.mariaKnows=true;
- toast(t("senyaFeta"),1100);
+ const sy=senyaForHand(G.hands0snap[0]);
+ bubble(0,sy.e+" "+t(sy.k));
+ toast(t("senyaFeta"),1300);
  renderActions();
+}
+/* taula d'ajuda de ses senyes */
+const SENYES_TABLE=[
+ ["gAmo","l'amo (11 de bastos)"],["gMadona","sa madona (10 d'oros)"],
+ ["gEspaseta","s'espaseta (1 d'espases)"],["gBastet","es bastet (1 de bastos)"],
+ ["gManE","sa manilla d'espases (7)"],["gManO","sa manilla d'oros (7)"],
+ ["gTres","un tres (o més)"],["gRes","no du res"]];
+function showSenyesHelp(){
+ $("#modalTitle").textContent=t("senyesTitle");
+ $("#modalSub").innerHTML=SENYES_TABLE.map(([k,card])=>"<b>"+t(k)+"</b> → "+card).join("<br>");
+ $("#modalSub").style.textAlign="left";
+ const box=$("#modalBtns");box.innerHTML="";
+ const b=el("button","safe",t("senyesOk"));
+ b.onclick=()=>$("#modal").classList.add("hidden");box.appendChild(b);
+ $("#modal").classList.remove("hidden");
 }
 
 /* ====================================================================
@@ -1283,10 +1346,10 @@ $("#btnStart").onclick=()=>{
 $("#btnMusic").onclick=()=>{ // alterna guitarreta/silenci (Joana Pons es tria a l'inici)
  setMusic(G.musicMode==="gtr"?"off":"gtr");
 };
+$("#btnHelp").onclick=showSenyesHelp;
 
 /* ---------------- Init art ---------------- */
 document.querySelectorAll(".avatar").forEach(a=>a.innerHTML=avatarSVG(a.dataset.av));
-$("#ginWrap").innerHTML=GIN_SVG;
 $("#cfgGin").innerHTML=GIN_SVG;
 $("#barScene").innerHTML=BAR_SVG;
 applyLang();

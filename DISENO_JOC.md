@@ -28,9 +28,19 @@ Referencia de ambiente: el humor gráfico de Zaca (Es Diari) — inspiración de
 - Fondo SVG a capas detrás de la mesa: vigas de madera, ventana en arco con la cala (sol, acantilados blancos con pinos, mar turquesa, llaüt con franja roja, gaviotas), estantería de botellas (gin, vino, hierbas), sobrasadas y queso colgados, guitarra apoyada, barril de vino.
 - Personajes grandes (avatares ~110 px) asomando sobre la mesa.
 
-## Mecánica de señas: "El Flash" ⚡
+## Mecánica de señas v2: gestos tradicionales (jun 2026) 🤫
 
-Sustituye a las señas presenciales del truc real (imposibles de simular en móvil).
+> Sustituye al flash (descartado por Joan: "no m'agrada gens").
+
+- **Sa companya hace la seña de verdad**: al empezar la mano, si lleva pieza, bocadillo con el gesto del código de llevant ("alça ses celles", "treu sa llengua cap a sa dreta"...). El jugador debe SABER LEER la seña — el juego enseña el código tradicional.
+- Botón **🤫** (arriba): chuleta con la tabla de señas de llevant.
+- **Fer senya**: tú haces el gesto de tu mejor pieza (1 vez por mano); la compañera te entiende.
+- **Vine a mi! / Pitja!**: órdenes de mesa en voz alta (legales en el truc real): la compañera tira floja (tú matas) o fuerte. Valen para la volta en curso.
+- **👍 Envida-li**: seña para que la compañera envide.
+
+## Mecánica de señas v1: "El Flash" ⚡ (DESCARTADA)
+
+Sustituía a las señas presenciales del truc real.
 
 **Decisión (jun 2026):**
 
