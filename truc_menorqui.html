@@ -264,8 +264,7 @@ button,.card{touch-action:manipulation} /* sense zoom accidental amb dits ràpid
     <div class="cfgRow">
       <span class="lbl" id="lblMusic">Música</span>
       <div class="seg" id="segMusic">
-        <button data-v="gtr" class="on" id="btnMusicGtr">🎸</button>
-        <button data-v="jp" id="btnMusicJp">🎵 Joana Pons</button>
+        <button data-v="gtr" class="on" id="btnMusicGtr">🎸 Guitarreta</button>
         <button data-v="off" id="btnMusicOff">🔇</button>
       </div>
     </div>
@@ -338,7 +337,7 @@ const T = {
  ca:{
   subtitle:"Es joc de cartes menorquí", lang:"Idioma", doses:"Jugar amb dosos?",
   dosesSi:"Sí (30)", dosesNo:"No (26)", music:"Música",
-  musicGtr:"🎸", musicJp:"🎵 Joana Pons ↗", musicOff:"🔇",
+  musicGtr:"🎸 Guitarreta", musicOff:"🔇",
   note:"Tu i na Maria contra en Toni i en Biel. A dues cames de 24!",
   start:"JUGAM? 🃏", noltros:"NOLTROS", ells:"ELLS",
   you:"Tu", deals:"reparteix", yourTurn:"Et toca tirar!", maTurn:"ets mà",
@@ -367,7 +366,7 @@ const T = {
  es:{
   subtitle:"El juego de cartas menorquín", lang:"Idioma", doses:"¿Jugar con doses?",
   dosesSi:"Sí (30)", dosesNo:"No (26)", music:"Música",
-  musicGtr:"🎸", musicJp:"🎵 Joana Pons ↗", musicOff:"🔇",
+  musicGtr:"🎸 Guitarrita", musicOff:"🔇",
   note:"Tú y Maria contra Toni y Biel. ¡A dos cames de 24!",
   start:"¿JUGAMOS? 🃏", noltros:"NOSOTROS", ells:"ELLOS",
   you:"Tú", deals:"reparte", yourTurn:"¡Te toca tirar!", maTurn:"eres mà",
@@ -1174,11 +1173,11 @@ function aiTurn(seat){
    if(seat===2&&G.askEnvit){G.askEnvit=false;proposeEnvit(team,seat,0);return}
    let ev=envitValue(G.hands0snap[seat]);
    if(seat===2&&G.mariaKnows)ev=Math.max(ev,envitValue(G.hands0snap[0]));
-   // lo normal és que envidin es 3r o 4t de sa volta; es primers només
-   // si duen peça grossa (amo/madona) que lliga amb tot i l'hauran de tirar
+   // quasi sempre envida es 3r o es 4t de sa volta; es 1r o es 2n quasi mai,
+   // i si ho fan és perquè duen peça grossa (amo/madona) que hauran de tirar
    const pos=(seat-G.leader+4)%4;
    const pecaGrossa=G.hands0snap[seat].some(c=>isAmo(c)||isMadona(c));
-   const posFactor=pos>=2?1:(pecaGrossa?0.8:0.08);
+   const posFactor=pos>=2?1:(pecaGrossa?0.5:0.03);
    if(ev>=29&&Math.random()<.7*posFactor*ag||Math.random()<.04*posFactor*ag){proposeEnvit(team,seat,0);return}
  }
  // 2) truc?
@@ -1306,12 +1305,9 @@ function musicLoop(){
    nextChordTime+=6*NOTE;chordIdx++;
  }
 }
-/* Cançons oficials de Joana Pons a YouTube (canal del segell):
-   Romanç de na Cecília + Menorca (amb ses guitarres) + Menorca (Del Folk al Pop) */
-const JP_VIDEOS=["iu0Zt-BtH0M","AebXCIEO7ww","AX6ysLLWAgY"];
-function setMusic(mode){ // "gtr" | "jp" | "off"
+function setMusic(mode){ // "gtr" | "off"
  G.musicMode=mode;
- $("#btnMusic").textContent=mode==="gtr"?"🎸":mode==="jp"?"🎵":"🔇";
+ $("#btnMusic").textContent=mode==="gtr"?"🎸":"🔇";
  $("#btnMusic").style.opacity=mode==="off"?.45:1;
  // guitarreta sintetitzada
  if(mode==="gtr"){
@@ -1322,13 +1318,6 @@ function setMusic(mode){ // "gtr" | "jp" | "off"
    AC.resume();musicOn=true;nextChordTime=Math.max(nextChordTime,AC.currentTime+0.1);
    if(!musicTimer)musicTimer=setInterval(musicLoop,200);
  }else{musicOn=false}
- // Joana Pons: ses discogràfiques bloquegen es reproductor incrustat,
- // així que obrim sa llista oficial en una altra pestanya i sona de fons.
- if(mode==="jp"){
-   window.open("https://www.youtube.com/watch_videos?video_ids="+JP_VIDEOS.join(","),"_blank");
- }
- const ex=document.getElementById("ytPlayer");
- if(ex)ex.remove();
 }
 
 /* ====================================================================
@@ -1340,7 +1329,7 @@ function applyLang(){
  $("#lblDoses").textContent=t("doses");
  $("#btnDosesSi").textContent=t("dosesSi");$("#btnDosesNo").textContent=t("dosesNo");
  $("#lblMusic").textContent=t("music");
- $("#btnMusicGtr").textContent=t("musicGtr");$("#btnMusicJp").textContent=t("musicJp");
+ $("#btnMusicGtr").textContent=t("musicGtr");
  $("#btnMusicOff").textContent=t("musicOff");
  $("#cfgNote").textContent=t("note");
  $("#btnStart").textContent=t("start");

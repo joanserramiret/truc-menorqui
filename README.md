@@ -6,7 +6,7 @@
 
 ## Què és es truc?
 
-Es truc és es joc de cartes de tota sa vida a Menorca: dues parelles, 30 cartes (sense vuits, nous, deus, onzes ni dotzes — manco **s'amo**, l'11 de bastos, i **sa madona**, es 10 d'oros, ses cartes que manen), envits, trucs, senyes i molta cara dura. Un patrimoni de s'illa que no es pot perdre.
+Es truc és es joc de cartes de tota sa vida a Menorca: dues parelles, 30 cartes (sense vuits, nous, deus, onzes ni dotzes — manco **l'amo**, l'11 de bastos, i **sa madona**, es 10 d'oros, ses cartes que manen), envits, trucs, senyes i molta cara dura. Un patrimoni de s'illa que no es pot perdre.
 
 ## Característiques
 
