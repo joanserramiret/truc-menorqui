@@ -189,12 +189,6 @@ h1.logo span{color:#fff;text-shadow:4px 4px 0 var(--ink),8px 8px 0 rgba(0,0,0,.2
 #modalBtns button.atk{background:var(--red);color:#fff}
 #modalBtns button.safe{background:#cfe8cf}
 
-/* mini-reproductor de Joana Pons (YouTube oficial) */
-#ytPlayer{position:fixed;right:6px;top:56px;width:176px;height:99px;z-index:60;
-  border:3px solid var(--ink);border-radius:10px;overflow:hidden;
-  box-shadow:3px 3px 0 rgba(34,32,26,.35);background:#000}
-#ytPlayer iframe{width:100%;height:100%;border:0;display:block}
-
 /* toast center */
 #toast{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%) rotate(-2deg);z-index:85;
   background:#ffe14d;border:4px solid var(--ink);border-radius:18px;padding:12px 22px;font-size:26px;
@@ -327,7 +321,7 @@ const T = {
  ca:{
   subtitle:"Es joc de cartes menorquí", lang:"Idioma", doses:"Jugar amb dosos?",
   dosesSi:"Sí (30)", dosesNo:"No (26)", music:"Música",
-  musicGtr:"🎸", musicJp:"🎵 Joana Pons", musicOff:"🔇",
+  musicGtr:"🎸", musicJp:"🎵 Joana Pons ↗", musicOff:"🔇",
   note:"Tu i na Maria contra en Toni i en Biel. A dues cames de 24!",
   start:"JUGAM? 🃏", noltros:"NOLTROS", ells:"ELLS",
   you:"Tu", deals:"reparteix", yourTurn:"Et toca tirar!", maTurn:"ets mà",
@@ -356,7 +350,7 @@ const T = {
  es:{
   subtitle:"El juego de cartas menorquín", lang:"Idioma", doses:"¿Jugar con doses?",
   dosesSi:"Sí (30)", dosesNo:"No (26)", music:"Música",
-  musicGtr:"🎸", musicJp:"🎵 Joana Pons", musicOff:"🔇",
+  musicGtr:"🎸", musicJp:"🎵 Joana Pons ↗", musicOff:"🔇",
   note:"Tú y Maria contra Toni y Biel. ¡A dos cames de 24!",
   start:"¿JUGAMOS? 🃏", noltros:"NOSOTROS", ells:"ELLOS",
   you:"Tú", deals:"reparte", yourTurn:"¡Te toca tirar!", maTurn:"eres mà",
@@ -1262,20 +1256,36 @@ function pluck(freq,when,vol){
  src.connect(g);g.connect(masterGain);
  src.start(when);
 }
-/* cadència andalusa Am — G — F — E, arpegi tranquil de taverna */
+/* cadència andalusa Am — G — F — E: arpegi tranquil de taverna
+   que s'alterna amb una tonada pròpia amb aire de jaleo menorquí (6/8) */
 const BARS=[
  [110.00,220.00,261.63,329.63,261.63,220.00], // Am
  [ 98.00,196.00,246.94,293.66,246.94,196.00], // G
  [ 87.31,174.61,220.00,261.63,220.00,174.61], // F
  [ 82.41,164.81,207.65,246.94,207.65,164.81], // E
 ];
+const MELODY=[ // melodia (composició pròpia, aire de festa) + baix per bar
+ {b:110.00,m:[659.25,523.25,440.00,523.25,659.25,523.25]}, // Am
+ {b: 98.00,m:[587.33,493.88,392.00,493.88,587.33,659.25]}, // G
+ {b: 87.31,m:[523.25,440.00,349.23,440.00,523.25,587.33]}, // F
+ {b: 82.41,m:[493.88,415.30,329.63,415.30,659.25,493.88]}, // E
+];
 let nextChordTime=0,chordIdx=0;
 function musicLoop(){
  if(!musicOn)return;
  const NOTE=0.27,LOOKAHEAD=0.8;
  while(nextChordTime<AC.currentTime+LOOKAHEAD){
-   const bar=BARS[chordIdx%BARS.length];
-   bar.forEach((f,k)=>pluck(f,nextChordTime+k*NOTE,k===0?0.30:0.16));
+   const i=chordIdx%4;
+   const seccioMelodia=Math.floor(chordIdx/8)%2===1; // 8 bars d'arpegi, 8 de tonada
+   if(seccioMelodia){
+     const bar=MELODY[i];
+     pluck(bar.b,nextChordTime,0.30);
+     pluck(bar.b*1.5,nextChordTime+3*NOTE,0.12);
+     bar.m.forEach((f,k)=>pluck(f,nextChordTime+k*NOTE,0.15));
+   }else{
+     const bar=BARS[i];
+     bar.forEach((f,k)=>pluck(f,nextChordTime+k*NOTE,k===0?0.30:0.16));
+   }
    nextChordTime+=6*NOTE;chordIdx++;
  }
 }
@@ -1295,22 +1305,13 @@ function setMusic(mode){ // "gtr" | "jp" | "off"
    AC.resume();musicOn=true;nextChordTime=Math.max(nextChordTime,AC.currentTime+0.1);
    if(!musicTimer)musicTimer=setInterval(musicLoop,200);
  }else{musicOn=false}
- // Joana Pons: si el joc està publicat a una web (http/https) el mini-reproductor
- // funciona incrustat; des d'un fitxer local YouTube el bloqueja (error 153)
- // i l'obrim en una altra pestanya perquè soni de fons.
- const hosted=location.protocol.startsWith("http");
- const ex=document.getElementById("ytPlayer");
+ // Joana Pons: ses discogràfiques bloquegen es reproductor incrustat,
+ // així que obrim sa llista oficial en una altra pestanya i sona de fons.
  if(mode==="jp"){
-   if(hosted){
-     if(!ex){
-       const d=document.createElement("div");d.id="ytPlayer";
-       d.innerHTML=`<iframe src="https://www.youtube-nocookie.com/embed/${JP_VIDEOS[0]}?playlist=${JP_VIDEOS.slice(1).join(",")},${JP_VIDEOS[0]}&autoplay=1&loop=1" allow="autoplay; encrypted-media" allowfullscreen title="Joana Pons"></iframe>`;
-       document.body.appendChild(d);
-     }
-   }else{
-     window.open("https://www.youtube.com/watch_videos?video_ids="+JP_VIDEOS.join(","),"_blank");
-   }
- }else if(ex)ex.remove();
+   window.open("https://www.youtube.com/watch_videos?video_ids="+JP_VIDEOS.join(","),"_blank");
+ }
+ const ex=document.getElementById("ytPlayer");
+ if(ex)ex.remove();
 }
 
 /* ====================================================================
