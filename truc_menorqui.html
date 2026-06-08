@@ -318,6 +318,17 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:60;
 #mesa::before{content:'';position:absolute;inset:16%;border-radius:50%;pointer-events:none;
   background:radial-gradient(circle, rgba(34,32,26,.13) 0%, rgba(34,32,26,.05) 45%, transparent 72%)}
 
+/* --- Guanyar sa basa: sa carta guanyadora s'encén i es monigot fa un bot --- */
+@keyframes wonCardPulse{0%,100%{box-shadow:3px 3px 0 rgba(34,32,26,.32)}
+  50%{box-shadow:0 0 0 3px var(--gold2), 0 0 16px rgba(227,179,65,.95)}}
+.slot .card.wonCard{animation:wonCardPulse .6s ease-in-out 2;z-index:30!important}
+@keyframes tookTrick{0%,100%{transform:translateY(0) scale(1)}30%{transform:translateY(-9px) scale(1.16)}}
+.player.took .avatar{animation:tookTrick .55s ease-out}
+
+/* --- Transició d'entrada quan s'obri sa taula --- */
+@keyframes screenFade{from{opacity:0;transform:scale(.985)}to{opacity:1;transform:none}}
+#scrGame:not(.hidden){animation:screenFade .38s ease-out}
+
 /* --- Respecta qui no vol moviment --- */
 @media (prefers-reduced-motion:reduce){
   *,*::after,*::before{animation:none!important}
@@ -690,7 +701,8 @@ const BAR_SVG=`<svg viewBox="0 0 420 740" preserveAspectRatio="xMidYMid slice">
   <path d="M108 240 v-100 q0 -52 102 -52 q102 0 102 52 v100 z" fill="#d8ecea" stroke="#22201a" stroke-width="3"/>
   <!-- cel i sol -->
   <circle cx="160" cy="122" r="17" fill="#f3dfa3" stroke="#22201a" stroke-width="2.4"/>
-  <path d="M160 98 v-6 M178 106 l4 -5 M183 122 h7 M138 106 l-4 -5 M137 122 h-7" stroke="#22201a" stroke-width="2" fill="none"/>
+  <g><path d="M160 98 v-6 M178 106 l4 -5 M183 122 h7 M138 106 l-4 -5 M137 122 h-7" stroke="#22201a" stroke-width="2" fill="none"/>
+   <animateTransform attributeName="transform" type="rotate" values="-8 160 122;8 160 122;-8 160 122" dur="7s" repeatCount="indefinite"/></g>
   <path d="M236 116 q5 -5 10 0 q5 -5 10 0 M252 132 q4 -4 8 0 q4 -4 8 0" stroke="#22201a" stroke-width="1.6" fill="none"/>
   <!-- penya-segats blancs -->
   <path d="M108 192 l30 -28 q8 -6 14 2 l10 14 v60 h-54 z" fill="#f6f1e2" stroke="#22201a" stroke-width="2.4"/>
@@ -1093,6 +1105,13 @@ function resolveTrick(){
  G.history.push({cards:G.played.slice(),winner:winnerTeam});
  if(winnerTeam){setMsg(winnerSeat===0?t("guanyaBasaTu"):NAMES[winnerSeat]+" "+t("guanyaBasa"));}
  else{setMsg(t("parda"));toast(t("parda"),900)}
+ // juice: encén sa carta guanyadora i fes botar es monigot que s'enduu sa basa
+ if(winnerSeat!==null){
+   const wc=document.querySelector("#slot"+winnerSeat+" .card:last-child");
+   if(wc)wc.classList.add("wonCard");
+   if(winnerSeat>0){const pw=$("#pl"+winnerSeat);
+     if(pw){pw.classList.add("took");setTimeout(()=>pw.classList.remove("took"),700)}}
+ }
  const outcome=handOutcome();
  setTimeout(()=>{
    G.played=[null,null,null,null];
