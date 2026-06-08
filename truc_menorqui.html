@@ -158,10 +158,14 @@ h1.logo span{color:#fff;text-shadow:4px 4px 0 var(--ink),8px 8px 0 rgba(0,0,0,.2
   background:var(--red);color:#fff;border-radius:6px;
   padding:0 5px;border:2px solid var(--ink);white-space:nowrap;z-index:2}
 .card.back{background:
-  repeating-linear-gradient(45deg, rgba(34,32,26,.25) 0 3px, transparent 3px 9px),
-  repeating-linear-gradient(-45deg, rgba(34,32,26,.18) 0 3px, transparent 3px 9px),
-  var(--red);}
-.card.back:after{content:'☼';color:var(--paper);font-size:26px;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-shadow:1px 1px 0 var(--ink)}
+  repeating-linear-gradient(45deg, rgba(34,32,26,.22) 0 3px, transparent 3px 9px),
+  repeating-linear-gradient(-45deg, rgba(34,32,26,.14) 0 3px, transparent 3px 9px),
+  radial-gradient(circle at 50% 42%, #c85a4d 0%, var(--red) 72%);
+  box-shadow:3px 3px 0 rgba(34,32,26,.32), inset 0 0 0 2.5px var(--paper), inset 0 0 0 4.5px var(--ink)}
+.card.back:after{content:'☼';color:var(--red);font-size:19px;position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle 15px at 50% 50%, var(--paper) 0 92%, rgba(0,0,0,0) 100%);
+  text-shadow:1px 1px 0 rgba(34,32,26,.25)}
 
 /* player hand */
 #handArea{display:flex;flex-direction:column;align-items:center;gap:8px;z-index:20;width:100%;
@@ -290,6 +294,29 @@ h1.logo{animation:logoWobble 4.5s ease-in-out infinite}
 /* --- Vinyeta de paper: una mica de fondària a ses cantonades (no tapa res) --- */
 body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:60;
   background:radial-gradient(ellipse at 50% 42%, transparent 58%, rgba(34,32,26,.10) 100%)}
+
+/* --- Repartir: ses cartes de sa mà entren de baix, una rere s'altra --- */
+@keyframes dealIn{from{transform:translateY(130px) scale(.55) rotate(-9deg)}to{transform:none}}
+#hand .card.dealin{animation:dealIn .42s ease-out backwards}
+
+/* --- Jugar carta: sa carta cau cap a sa taula des de sa banda des jugador --- */
+@keyframes playIn0{from{transform:translateY(70px) scale(.8)}to{transform:none}}
+@keyframes playIn1{from{transform:translateX(80px) scale(.8) rotate(8deg)}to{transform:none}}
+@keyframes playIn2{from{transform:translateY(-80px) scale(.8)}to{transform:none}}
+@keyframes playIn3{from{transform:translateX(-80px) scale(.8) rotate(-8deg)}to{transform:none}}
+.slot .card.playIn0{animation:playIn0 .3s ease-out}
+.slot .card.playIn1{animation:playIn1 .3s ease-out}
+.slot .card.playIn2{animation:playIn2 .3s ease-out}
+.slot .card.playIn3{animation:playIn3 .3s ease-out}
+
+/* --- Es marcador fa un bot quan puja --- */
+.scTeam .pts{display:inline-block}
+@keyframes scoreBump{0%{transform:scale(1)}35%{transform:scale(1.55);color:var(--red)}100%{transform:scale(1)}}
+.scTeam .pts.bump{animation:scoreBump .55s ease-out}
+
+/* --- Una ombra suau al mig de sa taula: ses cartes s'hi posen millor --- */
+#mesa::before{content:'';position:absolute;inset:16%;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle, rgba(34,32,26,.13) 0%, rgba(34,32,26,.05) 45%, transparent 72%)}
 
 /* --- Respecta qui no vol moviment --- */
 @media (prefers-reduced-motion:reduce){
@@ -852,18 +879,24 @@ function showFlash(cards,txt,cb){
 }
 
 /* ---------------- Render ---------------- */
+function bumpScore(elm){elm.classList.remove("bump");void elm.offsetWidth;elm.classList.add("bump")}
 function renderScore(){
- $("#ptsN").textContent=G.score.N;$("#ptsE").textContent=G.score.E;
+ const pn=$("#ptsN"),pe=$("#ptsE");
+ if(pn.textContent!==String(G.score.N)){pn.textContent=G.score.N;if(G.score.N>0)bumpScore(pn)}
+ if(pe.textContent!==String(G.score.E)){pe.textContent=G.score.E;if(G.score.E>0)bumpScore(pe)}
  $("#camN").textContent="🥂".repeat(G.cames.N)+"·".repeat(2-G.cames.N);
  $("#camE").textContent="🥂".repeat(G.cames.E)+"·".repeat(2-G.cames.E);
 }
 function renderHand(clickable){
  const h=$("#hand");h.innerHTML="";
+ const deal=G._dealAnim; // només a la repartida
  G.hands[0].forEach((c,i)=>{
    const d=cardEl(c);d.classList.add(clickable?"playable":"dim");
+   if(deal){d.classList.add("dealin");d.style.animationDelay=(i*0.12)+"s"}
    if(clickable)d.onclick=()=>playerPlays(i);
    h.appendChild(d);
  });
+ G._dealAnim=false;
 }
 function renderTable(){
  // ses cartes queden damunt sa taula: sa volta nova tapa s'anterior,
@@ -990,6 +1023,7 @@ function startHand(){
  sfxDeal();
  setMsg(G.dealer===0?t("dealsTu"):NAMES[G.dealer]+" "+t("deals"));
  G.partnerHint=null;
+ G._dealAnim=true; // anima sa repartida d'aquesta mà
  renderTable();renderHand(false);renderActions();
  // sa companya fa sa senya de sa seva millor peça, com a sa taula:
  // un gest que has de saber llegir (botó 🤫 per repassar es codi)
@@ -1031,6 +1065,9 @@ function playerPlays(i){
 function playCard(seat,idx){
  const c=G.hands[seat].splice(idx,1)[0];
  G.played[seat]=c;sfxCard();renderTable();renderHand(false);renderActions();
+ // sa carta acabada de jugar cau des de sa banda des jugador
+ const justEl=document.querySelector("#slot"+seat+" .card:last-child");
+ if(justEl)justEl.classList.add("playIn"+seat);
  advanceAfterCard(seat);
 }
 function advanceAfterCard(seat){
