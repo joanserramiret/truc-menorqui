@@ -108,6 +108,12 @@ h1.logo span{color:#fff;text-shadow:4px 4px 0 var(--ink),8px 8px 0 rgba(0,0,0,.2
 #slot2{left:50%;top:30%}
 #slot3{left:28%;top:48%}
 
+/* xupitos de gin/pomada damunt sa taula, com a totes ses taules de truc */
+.xupito{position:absolute;width:22px;z-index:5;transform:translate(-50%,-50%);
+  filter:drop-shadow(2px 2px 0 rgba(34,32,26,.25));pointer-events:none}
+#miniGin{position:absolute;width:30px;z-index:5;transform:translate(-50%,-50%) rotate(-4deg);
+  filter:drop-shadow(2px 3px 0 rgba(34,32,26,.3));pointer-events:none}
+
 /* mazo de cartes sobrants: es posa a la dreta del qui reparteix */
 #mazo{position:absolute;width:46px;height:69px;transform:translate(-50%,-50%);z-index:8}
 #mazo .card{width:46px;height:69px;position:absolute;left:0;top:0}
@@ -294,6 +300,11 @@ button,.card{touch-action:manipulation} /* sense zoom accidental amb dits ràpid
   <div id="tableArea">
    <div id="tableInner">
     <div id="mesa"></div>
+    <div class="xupito" style="left:38%;top:79%"></div>
+    <div class="xupito" style="left:79%;top:62%"></div>
+    <div class="xupito" style="left:62%;top:21%"></div>
+    <div class="xupito" style="left:21%;top:62%"></div>
+    <div id="miniGin" style="left:60%;top:64%"></div>
     <div id="mazo"></div>
     <div class="slot" id="slot0"></div>
     <div class="slot" id="slot1"></div>
@@ -469,71 +480,79 @@ function hatch(x,y,n,len,gap,ang){ // trama de ratlletes
   s+=`<line x1="${x+i*gap}" y1="${y}" x2="${x+i*gap+dx}" y2="${y+dy}" stroke="${INK}" stroke-width="1" opacity=".55"/>`;
  }return s;
 }
-function avatarSVG(kind){
- const cos=`
+/* monigotes parametritzats: barrets, mostatxos, barbes, ulleres i mocadors
+   que canvien a cada partida, perquè cada nom tengui sa seva cara */
+function cosSVG(){
+ return `
   <path d="M22 99 q2 -24 16 -28 l12 7 12 -7 q14 4 16 28 z" fill="${SHIRT}" stroke="${INK}" stroke-width="3"/>
   <path d="M24 99 q2 -20 13 -25 l5 25 z" fill="${VEST}" stroke="${INK}" stroke-width="2.6"/>
   <path d="M76 99 q-2 -20 -13 -25 l-5 25 z" fill="${VEST}" stroke="${INK}" stroke-width="2.6"/>
   ${hatch(27,82,4,7,3,1.2)}${hatch(62,82,4,7,3,1.9)}
   <rect x="38" y="91" width="24" height="8" fill="var(--red)" stroke="${INK}" stroke-width="2.6"/>
   <path d="M40 93 h20 M40 96 h20" stroke="${INK}" stroke-width=".8" opacity=".4"/>`;
-
- if(kind==="toni") return `<svg viewBox="0 0 100 100">${roughFilter("rgT")}<g filter="url(#rgT)">
-  ${cos}
+}
+function avatarSVG(seat){
+ const L=(G.look&&G.look[seat])||{};
+ const id="rg"+seat;
+ if(seat===2)return femaleSVG(id,L);
+ return maleSVG(id,L);
+}
+function maleSVG(id,L){
+ const hat=L.hat??0,face=L.face??0,nose=L.nose??0,eyes=L.eyes??0;
+ const HATS=[ // capell ample / gorra / boina
+  `<ellipse cx="50" cy="25" rx="29" ry="7.5" fill="${INK}"/><path d="M34 25 q0 -15 16 -15 q16 0 16 15 z" fill="${INK}"/><path d="M36 21 h28" stroke="#6b6557" stroke-width="2"/>`,
+  `<path d="M30 27 q2 -14 20 -14 q18 0 20 14 q-20 -6 -40 0 z" fill="${INK}"/><ellipse cx="50" cy="27" rx="22" ry="4.5" fill="${INK}"/><circle cx="50" cy="13" r="2.5" fill="${INK}"/>`,
+  `<path d="M32 25 q3 -12 18 -12 q15 0 18 12 q-8 5 -18 5 q-10 0 -18 -5 z" fill="#5b4632" stroke="${INK}" stroke-width="2.4"/><circle cx="50" cy="13" r="2" fill="${INK}"/>`
+ ];
+ const NASSOS=[ // bulbosa / llarga
+  `<ellipse cx="49" cy="51" rx="8.5" ry="7" fill="${SKIN}" stroke="${INK}" stroke-width="2.6"/><circle cx="45.5" cy="53" r="1" fill="${INK}" opacity=".7"/>`,
+  `<path d="M50 42 q6 9 -1 15 q4 2 6 0" fill="none" stroke="${INK}" stroke-width="2.6"/>`
+ ];
+ const CARES=[ // mostatxo / rialla badada / barba closa
+  `<path d="M35 58 q14 11 29 0 q-4 9 -14.5 9 q-10.5 0 -14.5 -9 z" fill="${INK}"/>${hatch(34,67,5,4,3,1.4)}`,
+  `<path d="M42 62 q8 7 16 0 q-2 6 -8 6 q-6 0 -8 -6 z" fill="#fff" stroke="${INK}" stroke-width="2.2"/><circle cx="39" cy="55" r=".8" fill="${INK}" opacity=".5"/><circle cx="63" cy="56" r=".8" fill="${INK}" opacity=".5"/>`,
+  `<path d="M33 52 q1 17 17 17 q16 0 17 -17 q-5 15 -17 15 q-12 0 -17 -15 z" fill="#5b4632" stroke="${INK}" stroke-width="2"/><path d="M42 60 q7 5 15 0" stroke="${INK}" stroke-width="2" fill="none"/>`
+ ];
+ const ULLS=[ // puntets / oberts
+  `<circle cx="42.5" cy="42" r="1.7" fill="${INK}"/><circle cx="56" cy="42" r="1.7" fill="${INK}"/>`,
+  `<circle cx="43" cy="41.5" r="3" fill="#fff" stroke="${INK}" stroke-width="1.8"/><circle cx="56" cy="41.5" r="3" fill="#fff" stroke="${INK}" stroke-width="1.8"/><circle cx="43.7" cy="42" r="1.1" fill="${INK}"/><circle cx="56.7" cy="42" r="1.1" fill="${INK}"/>`
+ ];
+ return `<svg viewBox="0 0 100 100">${roughFilter(id)}<g filter="url(#${id})">
+  ${cosSVG()}
   <path d="M31 32 q-5 20 3 29 q5 8 16 8 q11 0 16 -7 q8 -10 3 -30 z" fill="${SKIN}" stroke="${INK}" stroke-width="2.8"/>
   <path d="M29 42 a4 6 0 1 0 2 -1 z" fill="${SKIN}" stroke="${INK}" stroke-width="2"/>
   <path d="M71 42 a4 6 0 1 1 -2 -1 z" fill="${SKIN}" stroke="${INK}" stroke-width="2"/>
-  <circle cx="42.5" cy="42" r="1.7" fill="${INK}"/><circle cx="56" cy="42" r="1.7" fill="${INK}"/>
+  ${ULLS[eyes]}
   <path d="M38 38 q4 -3 8 -1 M52 37 q4 -2 8 1" stroke="${INK}" stroke-width="2.6" fill="none"/>
-  <ellipse cx="49" cy="51" rx="8.5" ry="7" fill="${SKIN}" stroke="${INK}" stroke-width="2.6"/>
-  <circle cx="45.5" cy="53" r="1" fill="${INK}" opacity=".7"/>
-  <path d="M44 47 q3 -2 6 0" stroke="${INK}" stroke-width="1" fill="none" opacity=".5"/>
-  <path d="M35 58 q14 11 29 0 q-4 9 -14.5 9 q-10.5 0 -14.5 -9 z" fill="${INK}"/>
-  ${hatch(34,67,5,4,3,1.4)}${hatch(57,67,5,4,3,1.7)}
-  <ellipse cx="50" cy="25" rx="29" ry="7.5" fill="${INK}"/>
-  <path d="M34 25 q0 -15 16 -15 q16 0 16 15 z" fill="${INK}"/>
-  <path d="M36 21 h28" stroke="#6b6557" stroke-width="2"/>
-  </g></svg>`;
-
- if(kind==="biel") return `<svg viewBox="0 0 100 100">${roughFilter("rgB")}<g filter="url(#rgB)">
-  ${cos}
-  <path d="M36 30 q-7 19 0 31 q4 8 13 8 q9 0 13 -8 q6 -13 0 -31 z" fill="${SKIN}" stroke="${INK}" stroke-width="2.8"/>
-  <ellipse cx="31" cy="45" rx="4.5" ry="7" fill="${SKIN}" stroke="${INK}" stroke-width="2.4"/>
-  <ellipse cx="69" cy="45" rx="4.5" ry="7" fill="${SKIN}" stroke="${INK}" stroke-width="2.4"/>
-  <path d="M30 43 q2 2 1 5 M70 43 q-2 2 -1 5" stroke="${INK}" stroke-width="1" fill="none" opacity=".5"/>
-  <circle cx="44" cy="41" r="3.2" fill="#fff" stroke="${INK}" stroke-width="1.8"/>
-  <circle cx="57" cy="41" r="3.2" fill="#fff" stroke="${INK}" stroke-width="1.8"/>
-  <circle cx="44.7" cy="41.6" r="1.2" fill="${INK}"/><circle cx="57.7" cy="41.6" r="1.2" fill="${INK}"/>
-  <path d="M40 34 q4 -4 8 -2 M53 32 q4 -2 8 2" stroke="${INK}" stroke-width="2.4" fill="none"/>
-  <path d="M50 42 q6 9 -1 15 q4 2 6 0" fill="none" stroke="${INK}" stroke-width="2.6"/>
-  <path d="M42 62 q8 7 16 0 q-2 6 -8 6 q-6 0 -8 -6 z" fill="#fff" stroke="${INK}" stroke-width="2.2"/>
-  <circle cx="39" cy="55" r=".8" fill="${INK}" opacity=".5"/><circle cx="63" cy="56" r=".8" fill="${INK}" opacity=".5"/>
-  <path d="M30 27 q2 -14 20 -14 q18 0 20 14 q-20 -6 -40 0 z" fill="${INK}"/>
-  <ellipse cx="50" cy="27" rx="22" ry="4.5" fill="${INK}"/>
-  <circle cx="50" cy="13" r="2.5" fill="${INK}"/>
-  </g></svg>`;
-
- if(kind==="maria") return `<svg viewBox="0 0 100 100">${roughFilter("rgM")}<g filter="url(#rgM)">
+  ${NASSOS[nose]}
+  ${CARES[face]}
+  ${HATS[hat]}
+ </g></svg>`;
+}
+function femaleSVG(id,L){
+ const cab=L.cab||"#8a7a64", moc=L.moc||"#b5483a";
+ const ulleres=L.ulleres?`<circle cx="43" cy="42" r="5.2" fill="none" stroke="${INK}" stroke-width="1.6"/><circle cx="57" cy="42" r="5.2" fill="none" stroke="${INK}" stroke-width="1.6"/><path d="M48.2 42 h3.6" stroke="${INK}" stroke-width="1.6"/>`:"";
+ return `<svg viewBox="0 0 100 100">${roughFilter(id)}<g filter="url(#${id})">
   <path d="M24 99 q2 -22 16 -26 l10 6 10 -6 q14 4 16 26 z" fill="#7a6f56" stroke="${INK}" stroke-width="3"/>
   <path d="M33 80 l-6 19 M67 80 l6 19" stroke="${INK}" stroke-width="1.6" opacity=".5"/>
   ${hatch(30,84,4,7,3.2,1.3)}${hatch(60,84,4,7,3.2,1.8)}
   <path d="M50 74 v8" stroke="${INK}" stroke-width="2"/>
   <path d="M47.5 82 h5 v5 h-5 z M50 82 v5 M47.5 84.5 h5" stroke="${INK}" stroke-width="1.3" fill="#e3b341"/>
-  <path d="M29 48 q-6 -30 21 -30 q27 0 21 30 l-2 6 q-19 8 -38 0 z" fill="#8a7a64" stroke="${INK}" stroke-width="2.8"/>
-  <circle cx="68" cy="22" r="7" fill="#8a7a64" stroke="${INK}" stroke-width="2.6"/>
+  <path d="M29 48 q-6 -30 21 -30 q27 0 21 30 l-2 6 q-19 8 -38 0 z" fill="${cab}" stroke="${INK}" stroke-width="2.8"/>
+  <circle cx="68" cy="22" r="7" fill="${cab}" stroke="${INK}" stroke-width="2.6"/>
   <path d="M64 20 q4 -2 7 1 M65 24 q3 -2 6 0" stroke="${INK}" stroke-width=".9" fill="none" opacity=".5"/>
   <path d="M31 46 q-3 -22 19 -22 q22 0 19 22 q1 11 -5.5 15 q-13.5 6 -27 0 q-6.5 -4 -5.5 -15 z" fill="${SKIN}" stroke="${INK}" stroke-width="2.6"/>
   <path d="M32 33 q8 -8 17 -7 M68 33 q-6 -7 -14 -7" stroke="${INK}" stroke-width="1.4" fill="none" opacity=".6"/>
   <circle cx="43" cy="42" r="1.6" fill="${INK}"/><circle cx="57" cy="42" r="1.6" fill="${INK}"/>
+  ${ulleres}
   <path d="M40.5 44.5 q2.5 2 5 .5 M54.5 45 q2.5 1.5 5 -.5" stroke="${INK}" stroke-width="1.1" fill="none" opacity=".55"/>
   <path d="M39 38.5 q4 -2.5 7 -1 M54 37.5 q4 -1.5 7 1" stroke="${INK}" stroke-width="2" fill="none"/>
   <path d="M50 44 q3.5 6 -.5 10 q2 1.5 4 .5" fill="none" stroke="${INK}" stroke-width="2.3"/>
   <path d="M41 60 q9 7 18 -.5" stroke="${INK}" stroke-width="2.3" fill="none"/>
   <path d="M44 63.5 q6 3 12 -.5" stroke="${INK}" stroke-width="1.1" fill="none" opacity=".5"/>
   ${hatch(34,52,3,3,2.6,1.5)}${hatch(61,52,3,3,2.6,1.6)}
-  <path d="M36 18 q14 -8 28 0" stroke="#b5483a" stroke-width="3.5" fill="none"/>
+  <path d="M36 18 q14 -8 28 0" stroke="${moc}" stroke-width="3.5" fill="none"/>
   </g></svg>`;
- return "";
 }
 
 /* ---------------- SVG art: botella de gin estil Xoriguer + copeta (a plumilla) ---------------- */
@@ -557,6 +576,21 @@ const GIN_SVG=`<svg viewBox="0 0 100 130">
  <path d="M7 114 l3 13 h14 l3 -13" fill="#e9e2cc" stroke="#22201a" stroke-width="2.4"/>
  <path d="M10 120 h14" stroke="#22201a" stroke-width="1" opacity=".4"/>
  </g>
+</svg>`;
+
+/* xupito de gin amb pomada (mig begut, és clar) */
+const XUPITO_SVG=`<svg viewBox="0 0 24 30">
+ <path d="M4 3 l3 24 h10 l3 -24 z" fill="rgba(238,243,226,.55)" stroke="#22201a" stroke-width="2.2"/>
+ <path d="M6.5 14 l1.5 11 h8 l1.5 -11 z" fill="#eef3e2" stroke="none" opacity=".9"/>
+ <path d="M5.5 5 h13" stroke="#fff" stroke-width="1.2" opacity=".7"/>
+</svg>`;
+/* botelleta de gin per sa taula, sense tapar res */
+const MINIGIN_SVG=`<svg viewBox="0 0 30 64">
+ <rect x="12" y="2" width="6" height="7" rx="1.5" fill="#b59a55" stroke="#22201a" stroke-width="1.8"/>
+ <path d="M10 9 h10 q4 7 4 15 v33 a3 3 0 0 1 -3 3 h-12 a3 3 0 0 1 -3 -3 v-33 q4 -8 4 -15 z"
+   fill="#2e5a3e" stroke="#22201a" stroke-width="2.2"/>
+ <rect x="9" y="30" width="12" height="16" rx="2" fill="#f3e9cf" stroke="#22201a" stroke-width="1.6"/>
+ <path d="M15 33 l-2.5 5 h5 z M15 38 v4" stroke="#b5483a" stroke-width="1.2" fill="none"/>
 </svg>`;
 
 /* ---------------- SVG art: es bar menorquí amb vista a sa cala ---------------- */
@@ -667,7 +701,7 @@ function pecaName(c){
  if(isMadona(c))return "madona";
  if(c.s==="E"&&c.n===1)return "espaseta";
  if(c.s==="B"&&c.n===1)return "bastet";
- if(c.n===7&&(c.s==="E"||c.s==="O"))return "manilla";
+ if(c.n===7&&(c.s==="E"||c.s==="O"))return "mata"; // a Menorca: sa mata
  return null;
 }
 /* valor d'envit d'una mà de 3 cartes */
@@ -861,6 +895,16 @@ function startMatch(){
  NAMES[2]=POOL_DONES[Math.floor(Math.random()*POOL_DONES.length)];
  for(const s of[1,2,3])$("#pl"+s+" .pname").textContent=NAMES[s];
  G.aggro=[1,.75+Math.random()*.55,.75+Math.random()*.55,.75+Math.random()*.55];
+ // i cares noves: barret, mostatxo o barba, ulleres, mocador...
+ const r=n=>Math.floor(Math.random()*n);
+ const pick=a=>a[r(a.length)];
+ G.look={
+  1:{hat:r(3),face:r(3),nose:r(2),eyes:r(2)},
+  3:{hat:r(3),face:r(3),nose:r(2),eyes:r(2)},
+  2:{ulleres:Math.random()<.4,cab:pick(["#8a7a64","#5b4632","#a8937c"]),moc:pick(["#b5483a","#5b7a9a","#3e7a4e"])}
+ };
+ if(G.look[1].hat===G.look[3].hat&&G.look[1].face===G.look[3].face)G.look[3].hat=(G.look[3].hat+1)%3;
+ for(const s of[1,2,3])$("#pl"+s+" .avatar").innerHTML=avatarSVG(s);
  renderScore();startHand();
 }
 function startCamaWin(team){
@@ -888,6 +932,7 @@ function startHand(){
  G.flashPlayer=false;G.flashMaria=false;G.mariaKnows=false;
  G.askEnvit=false;G.history=[];
  G.leader=G.maSeat;G.turn=G.maSeat;G.inHand=true;
+ sfxDeal();
  setMsg(G.dealer===0?t("dealsTu"):NAMES[G.dealer]+" "+t("deals"));
  G.partnerHint=null;
  renderTable();renderHand(false);renderActions();
@@ -930,7 +975,7 @@ function playerPlays(i){
 }
 function playCard(seat,idx){
  const c=G.hands[seat].splice(idx,1)[0];
- G.played[seat]=c;renderTable();renderHand(false);renderActions();
+ G.played[seat]=c;sfxCard();renderTable();renderHand(false);renderActions();
  advanceAfterCard(seat);
 }
 function advanceAfterCard(seat){
@@ -986,6 +1031,7 @@ function handOutcome(){
 /* ---------------- Final de mà ---------------- */
 function endHand(winnerTeam){
  G.inHand=false;renderActions();
+ sfxWin(winnerTeam==="N");
  setMsg(winnerTeam==="N"?t("guanyaMaN"):t("ells")+" "+t("guanyaMa"));
  // 1r: envit, 2n: truc
  let camaDone=resolveEnvitAtEnd();
@@ -1239,7 +1285,7 @@ function playerSenya(){
 const SENYES_TABLE=[
  ["gAmo","l'amo (11 de bastos)"],["gMadona","sa madona (10 d'oros)"],
  ["gEspaseta","s'espaseta (1 d'espases)"],["gBastet","es bastet (1 de bastos)"],
- ["gManE","sa manilla d'espases (7)"],["gManO","sa manilla d'oros (7)"],
+ ["gManE","sa mata d'espases (es 7)"],["gManO","sa mata d'oros (es 7)"],
  ["gTres","un tres (o més)"],["gRes","no du res"]];
 function showSenyesHelp(){
  $("#modalTitle").textContent=t("senyesTitle");
@@ -1305,19 +1351,45 @@ function musicLoop(){
    nextChordTime+=6*NOTE;chordIdx++;
  }
 }
+function ensureAC(){
+ if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();
+   masterGain=AC.createGain();masterGain.gain.value=0.5;
+   const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=3200;
+   masterGain.connect(lp);lp.connect(AC.destination);}
+ AC.resume();
+}
 function setMusic(mode){ // "gtr" | "off"
  G.musicMode=mode;
  $("#btnMusic").textContent=mode==="gtr"?"🎸":"🔇";
  $("#btnMusic").style.opacity=mode==="off"?.45:1;
- // guitarreta sintetitzada
  if(mode==="gtr"){
-   if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();
-     masterGain=AC.createGain();masterGain.gain.value=0.5;
-     const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=3200;
-     masterGain.connect(lp);lp.connect(AC.destination);}
-   AC.resume();musicOn=true;nextChordTime=Math.max(nextChordTime,AC.currentTime+0.1);
+   ensureAC();musicOn=true;nextChordTime=Math.max(nextChordTime,AC.currentTime+0.1);
    if(!musicTimer)musicTimer=setInterval(musicLoop,200);
  }else{musicOn=false}
+}
+
+/* ---------------- Sons de cartes (sintetitzats, com tot) ---------------- */
+let NOISE=null;
+function noiseBuf(){
+ if(NOISE)return NOISE;
+ const sr=AC.sampleRate,b=AC.createBuffer(1,Math.floor(sr*0.09),sr),d=b.getChannelData(0);
+ for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2.2);
+ NOISE=b;return b;
+}
+function sfxCard(){ // es "xac!" d'una carta damunt sa taula
+ try{ensureAC();
+  const s=AC.createBufferSource();s.buffer=noiseBuf();
+  const f=AC.createBiquadFilter();f.type="bandpass";
+  f.frequency.value=1700+Math.random()*700;f.Q.value=1.1;
+  const g=AC.createGain();g.gain.value=0.55;
+  s.connect(f);f.connect(g);g.connect(masterGain);s.start();
+ }catch(e){}
+}
+function sfxDeal(){[0,90,180].forEach(d=>setTimeout(sfxCard,d))} // escartejar i repartir
+function sfxWin(noltros){ // acord curt: amunt si guanyam, avall si perdem
+ try{ensureAC();
+  (noltros?[523.25,659.25]:[329.63,261.63]).forEach((f,k)=>pluck(f,AC.currentTime+k*0.13,0.18));
+ }catch(e){}
 }
 
 /* ====================================================================
@@ -1356,9 +1428,11 @@ $("#btnMusic").onclick=()=>{ // alterna guitarreta/silenci (Joana Pons es tria a
 $("#btnHelp").onclick=showSenyesHelp;
 
 /* ---------------- Init art ---------------- */
-document.querySelectorAll(".avatar").forEach(a=>a.innerHTML=avatarSVG(a.dataset.av));
+for(const s of[1,2,3])$("#pl"+s+" .avatar").innerHTML=avatarSVG(s);
 $("#cfgGin").innerHTML=GIN_SVG;
 $("#barScene").innerHTML=BAR_SVG;
+document.querySelectorAll(".xupito").forEach(x=>x.innerHTML=XUPITO_SVG);
+$("#miniGin").innerHTML=MINIGIN_SVG;
 applyLang();
 
 /* ---------------- Baralla real: es descarrega de Wikimedia en obrir ----------------

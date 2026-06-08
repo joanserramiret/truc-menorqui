@@ -29,8 +29,8 @@ Composición: 1–7 de los cuatro palos (28 cartas) + 11 de bastos + 10 de oros 
 | 2 | 10 de oros | **Sa madona** (es segon) |
 | 3 | 1 de espadas | **Espaseta** / llengua bona |
 | 4 | 1 de bastos | **Bastet** / llengua dolenta |
-| 5 | 7 de espadas | **Manilla d'espases** (bona) |
-| 6 | 7 de oros | **Manilla d'oros** (dolenta) |
+| 5 | 7 de espadas | **Sa mata d'espases** (en fuentes escritas: manilla bona) |
+| 6 | 7 de oros | **Sa mata d'oros** (manilla dolenta) |
 | 7 | Los 3 (los cuatro, igual valor) | Tresos |
 | 8 | Los 2 (los cuatro, igual valor) — *solo si se juega con doses* | Moixets |
 | 9 | 1 de oros y 1 de copas | Asos bords |
