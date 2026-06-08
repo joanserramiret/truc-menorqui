@@ -1115,6 +1115,18 @@ function knownOppMax(team){
  const k=G.known&&G.known[team]; if(!k)return -1;
  let mx=-1; for(const s in k){ if(teamOf(+s)!==team && k[s]>mx) mx=k[s] } return mx;
 }
+/* ====== Avaluació per ses apostes de sa IA ======
+   handStrength va d'uns 4 a uns 49. envitValue, d'uns 5 a uns 35. */
+function teamTrucStrength(team){ // sa millor mà de sa parella mana, sa companya ajuda
+ const ss=[0,1,2,3].filter(s=>teamOf(s)===team);
+ const a=handStrength(G.hands0snap[ss[0]]), b=handStrength(G.hands0snap[ss[1]]);
+ return Math.max(a,b)*0.82 + Math.min(a,b)*0.42; // ~5 .. ~59
+}
+function teamEnvit(team){ // l'envit el guanya sa millor mà de sa parella
+ const ss=[0,1,2,3].filter(s=>teamOf(s)===team);
+ return Math.max(envitValue(G.hands0snap[ss[0]]), envitValue(G.hands0snap[ss[1]]));
+}
+function remTo24(team){return 24-G.score[team]} // quant li falta per fer cama
 /* botó de senya persistent durant sa 1a volta (independent des torn) */
 function renderSenyaBtn(){
  const b=$("#btnSenya"); if(!b)return;
@@ -1317,22 +1329,27 @@ function playerRespondTruc(lvl,callerTeam){
  showPrompt(t("trucPregunta")+" "+(TRUC_CHAIN[lvl][2]==="cama"?t("cama"):TRUC_CHAIN[lvl][2]+" "+t("punts"))+" · "+opinio,btns);
 }
 function aiRespondTruc(lvl,callerTeam){
- // només es crida quan responen els rivals (equip E: Toni i Biel)
- const stToni=handStrength(G.hands0snap[1]),stBiel=handStrength(G.hands0snap[3]);
- const st=Math.max(stToni,stBiel);
- const respSeat=stToni>=stBiel?1:3;
- const stake=TRUC_CHAIN[lvl][2];
+ // només la criden es rivals (equip E). Decideixen amb sa força real de sa parella.
+ const respSeat=handStrength(G.hands0snap[1])>=handStrength(G.hands0snap[3])?1:3;
+ const ts=teamTrucStrength("E");
  const nxt=lvl+1;
- const farol=Math.random()<.07;
  const agR=G.aggro?G.aggro[respSeat]:1;
- const km=knownOppMax("E"); // què sap s'equip E de ses cartes des rivals (equip N)
- if((st>36||farol)&&km<12&&nxt<TRUC_CHAIN.length&&Math.random()<.35*agR){proposeTruc("E",respSeat,nxt);return}
- // accepten sovint, però sense suïcidar-se
- let threshold=stake==="cama"?37:(25+lvl*3);
- if(km>=12)threshold+=8;             // saben que duen peça grossa: peus de plom
- else if(km>=0&&km<=7)threshold-=6;  // els han caçat fluixos: més confiats
- if(st>threshold-(agR-1)*12-Math.random()*7)acceptTruc(lvl,callerTeam,respSeat);
- else rejectTruc(lvl,callerTeam,respSeat);
+ const km=knownOppMax("E");
+ const endgame=Math.min(remTo24("N"),remTo24("E"))<=4;
+ let acc=28+lvl*4;               // com més puja s'aposta, més mà cal per acceptar
+ if(km>=12)acc+=7;                // saben que es rival mana: peus de plom
+ else if(km>=0&&km<=7)acc-=6;     // l'han caçat fluix: més confiats
+ if(endgame)acc-=5;               // a s'endgame, lluita més
+ acc-=(agR-1)*10;                 // es caràcter mou s'umbral
+ // pujar (retruc...): només amb mà ben forta, o un farol molt comptat
+ if(nxt<TRUC_CHAIN.length && km<12 &&
+    ((ts>=acc+9&&Math.random()<0.5*agR)||(ts>=acc&&Math.random()<0.06*agR))){
+   proposeTruc("E",respSeat,nxt);return;
+ }
+ const margin=ts-acc;
+ if(margin>=0){acceptTruc(lvl,callerTeam,respSeat);return}
+ if(margin>-5&&Math.random()<0.35*agR){acceptTruc(lvl,callerTeam,respSeat);return} // ajustada
+ rejectTruc(lvl,callerTeam,respSeat);
 }
 
 /* ====================================================================
@@ -1383,15 +1400,22 @@ function playerRespondEnvit(lvl,callerTeam){
    +" — "+t("lligatTeu")+": "+envitValue(G.hands0snap[0])+" · "+opinio,btns);
 }
 function aiRespondEnvit(lvl,callerTeam){
- const seats=[1,3];
- const ev=Math.max(...seats.map(s=>envitValue(G.hands0snap[s])));
+ const ev=teamEnvit("E");
  const respSeat=envitValue(G.hands0snap[1])>=envitValue(G.hands0snap[3])?1:3;
  const nxt=lvl+1;
  const agR=G.aggro?G.aggro[respSeat]:1;
- if(ev>=32&&nxt<ENVIT_CHAIN.length&&Math.random()<.45*agR){proposeEnvit("E",respSeat,nxt);return}
- const threshold=28+lvl*2;
- if(ev>threshold-(agR-1)*8-Math.random()*4||Math.random()<.06*agR)acceptEnvit(lvl,callerTeam,respSeat);
- else rejectEnvit(lvl,callerTeam,respSeat);
+ const endgame=Math.min(remTo24("N"),remTo24("E"))<=4;
+ let acc=29+lvl*2.5;
+ if(endgame)acc-=4;
+ acc-=(agR-1)*6;
+ if(nxt<ENVIT_CHAIN.length &&
+    ((ev>=acc+5&&Math.random()<0.5*agR)||(ev>=acc+2&&Math.random()<0.07*agR))){
+   proposeEnvit("E",respSeat,nxt);return;
+ }
+ const margin=ev-acc;
+ if(margin>=0){acceptEnvit(lvl,callerTeam,respSeat);return}
+ if(margin>-4&&Math.random()<0.3*agR){acceptEnvit(lvl,callerTeam,respSeat);return}
+ rejectEnvit(lvl,callerTeam,respSeat);
 }
 
 /* ====================================================================
@@ -1409,28 +1433,27 @@ function aiTurn(seat){
    if(seat===2&&G.askEnvit){G.askEnvit=false;proposeEnvit(team,seat,0);return}
    let ev=envitValue(G.hands0snap[seat]);
    if(seat===2&&G.mariaKnows)ev=Math.max(ev,envitValue(G.hands0snap[0]));
-   // quasi sempre envida es 3r o es 4t de sa volta; es 1r o es 2n quasi mai,
-   // i si ho fan és perquè duen peça grossa (amo/madona) que hauran de tirar
+   // millor envidar tard (3r/4t de sa volta), o si dus peça grossa que hauràs de tirar igualment
    const pos=(seat-G.leader+4)%4;
    const pecaGrossa=G.hands0snap[seat].some(c=>isAmo(c)||isMadona(c));
-   const posFactor=pos>=2?1:(pecaGrossa?0.5:0.03);
-   if(ev>=29&&Math.random()<.7*posFactor*ag||Math.random()<.04*posFactor*ag){proposeEnvit(team,seat,0);return}
+   const posOk=pos>=2||pecaGrossa;
+   if((ev>=29&&posOk&&Math.random()<0.6*ag)||(ev>=33&&Math.random()<0.5*ag)){proposeEnvit(team,seat,0);return}
+   if(ev>=24&&posOk&&Math.random()<0.04*ag){proposeEnvit(team,seat,0);return} // farol comptat
  }
  // 2) truc?
  const lvl=G.truc.level+1;
  const canRaise=(G.truc.canRaise===null||G.truc.canRaise===team)&&lvl<TRUC_CHAIN.length;
  if(canRaise){
-   let s2=st;
+   let s2=handStrength(G.hands0snap[seat]);
    if(seat===2&&G.mariaKnows)s2=Math.max(s2,handStrength(G.hands0snap[0]));
-   const wantLvl=lvl===0?33:37+lvl*2;
-   // trucar més tard (a 2a/3a volta) és més habitual: així es juguen les tres voltes
-   const lateBonus=G.baza>=2?0.25:0;
-   // si hem caçat ses senyes des rivals, jugam en conseqüència
    const km=knownOppMax(team);
-   let trucProb=(.25+lateBonus)*ag;
-   if(km>=12)trucProb*=0.35;            // saben que es rival mana: menys truc
-   else if(km>=0&&km<=7)trucProb*=1.7;  // l'han caçat fluix: més truc
-   if((s2>wantLvl&&Math.random()<trucProb)||Math.random()<.03*ag){proposeTruc(team,seat,lvl);return}
+   let want=33+lvl*3;                 // mà pròpia ben forta per trucar
+   if(km>=12)want+=6;                 // es rival mana: prudència
+   else if(km>=0&&km<=7)want-=7;      // l'han caçat fluix: ataca
+   const late=G.baza>=2?0.18:0;       // a 2a/3a volta és més habitual
+   const strong=s2>=want;
+   const bluff=!strong && s2>=24 && Math.random()<0.05*ag*(0.5+late); // farol comptat, mà mig-decent
+   if((strong&&Math.random()<(0.5+late)*ag)||bluff){proposeTruc(team,seat,lvl);return}
  }
  // 3) jugar carta
  const idx=aiChooseCard(seat);
