@@ -166,9 +166,11 @@ h1.logo span{color:#fff;text-shadow:4px 4px 0 var(--ink),8px 8px 0 rgba(0,0,0,.2
 /* player hand */
 #handArea{display:flex;flex-direction:column;align-items:center;gap:8px;z-index:20;width:100%;
   padding:6px 8px calc(14px + env(safe-area-inset-bottom,0px))}
-/* barra d'accions: mínim fix, però amb moltes opcions fa dues files (tot visible!) */
-#actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:center;
-  min-height:54px;max-width:100vw}
+/* barra d'accions FORA del flux: flota damunt sa vorera de sa taula
+   i mai no fa ballar sa mesa ni es monigots */
+#actions{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);
+  width:min(100vw,520px);margin-bottom:4px;
+  display:flex;gap:6px;flex-wrap:wrap;justify-content:center;align-items:flex-end;z-index:25}
 #actions button{font-size:14px;padding:8px 10px;background:var(--paper);white-space:nowrap}
 #actions button.atk{background:var(--red);color:#fff}
 #actions button.flash{background:var(--gold2)}
@@ -270,7 +272,8 @@ button,.card{touch-action:manipulation} /* sense zoom accidental amb dits ràpid
     <div class="cfgRow">
       <span class="lbl" id="lblMusic">Música</span>
       <div class="seg" id="segMusic">
-        <button data-v="gtr" class="on" id="btnMusicGtr">🎸 Guitarreta</button>
+        <button data-v="sea" class="on" id="btnMusicSea">🌊 Sa cala</button>
+        <button data-v="gtr" id="btnMusicGtr">🎸</button>
         <button data-v="off" id="btnMusicOff">🔇</button>
       </div>
     </div>
@@ -348,7 +351,7 @@ const T = {
  ca:{
   subtitle:"Es joc de cartes menorquí", lang:"Idioma", doses:"Jugar amb dosos?",
   dosesSi:"Sí (30)", dosesNo:"No (26)", music:"Música",
-  musicGtr:"🎸 Guitarreta", musicOff:"🔇",
+  musicSea:"🌊 Sa cala", musicGtr:"🎸 Jota", musicOff:"🔇",
   note:"Tu i na Maria contra en Toni i en Biel. A dues cames de 24!",
   start:"JUGAM? 🃏", noltros:"NOLTROS", ells:"ELLS",
   you:"Tu", deals:"reparteix", yourTurn:"Et toca tirar!", maTurn:"ets mà",
@@ -377,7 +380,7 @@ const T = {
  es:{
   subtitle:"El juego de cartas menorquín", lang:"Idioma", doses:"¿Jugar con doses?",
   dosesSi:"Sí (30)", dosesNo:"No (26)", music:"Música",
-  musicGtr:"🎸 Guitarrita", musicOff:"🔇",
+  musicSea:"🌊 La cala", musicGtr:"🎸 Jota", musicOff:"🔇",
   note:"Tú y Maria contra Toni y Biel. ¡A dos cames de 24!",
   start:"¿JUGAMOS? 🃏", noltros:"NOSOTROS", ells:"ELLOS",
   you:"Tú", deals:"reparte", yourTurn:"¡Te toca tirar!", maTurn:"eres mà",
@@ -741,7 +744,7 @@ const ENVIT_CHAIN=[
  ["envit",1,2],["joenvit",2,4],["dosmes",4,6],["tots",6,"tots"]];
 
 const G={
- withDoses:true, musicMode:"gtr",
+ withDoses:true, musicMode:"sea",
  score:{N:0,E:0}, cames:{N:0,E:0},
  dealer:3, maSeat:0, hands:[[],[],[],[]], played:[null,null,null,null],
  trickWinners:[], leader:0, turn:0, baza:1,
@@ -1313,41 +1316,45 @@ function ksBuffer(freq){
  KS_CACHE[key]=buf;return buf;
 }
 function pluck(freq,when,vol){
- const src=AC.createBufferSource();src.buffer=ksBuffer(freq);
- const g=AC.createGain();g.gain.value=vol;
- src.connect(g);g.connect(masterGain);
- src.start(when);
+ // dues cordes lleugerament desafinades: so més ric, més de guiterra de veritat
+ [[freq,vol],[freq*1.004,vol*0.55]].forEach(([f,v])=>{
+   const src=AC.createBufferSource();src.buffer=ksBuffer(f);
+   const g=AC.createGain();g.gain.value=v;
+   src.connect(g);g.connect(masterGain);
+   src.start(when);
+ });
 }
-/* cadència andalusa Am — G — F — E: arpegi tranquil de taverna
-   que s'alterna amb una tonada pròpia amb aire de jaleo menorquí (6/8) */
-const BARS=[
- [110.00,220.00,261.63,329.63,261.63,220.00], // Am
- [ 98.00,196.00,246.94,293.66,246.94,196.00], // G
- [ 87.31,174.61,220.00,261.63,220.00,174.61], // F
- [ 82.41,164.81,207.65,246.94,207.65,164.81], // E
+/* Jota de taverna (composició pròpia amb aire de jota menorquina):
+   rasgueig + baix + melodia, estructura A-A-B-B que va rodant */
+const JCH={ // acords [baix, cordes...]
+ C:[130.81,196.00,261.63,329.63],
+ G7:[ 98.00,196.00,246.94,293.66],
+ F:[174.61,220.00,261.63,349.23]
+};
+const JOTA_A=[
+ {c:"C", m:[523.25,587.33,659.25,659.25,587.33,523.25]},
+ {c:"G7",m:[493.88,523.25,587.33,587.33,523.25,493.88]},
+ {c:"G7",m:[587.33,523.25,493.88,440.00,493.88,392.00]},
+ {c:"C", m:[659.25,587.33,523.25,523.25,392.00,523.25]},
 ];
-const MELODY=[ // melodia (composició pròpia, aire de festa) + baix per bar
- {b:110.00,m:[659.25,523.25,440.00,523.25,659.25,523.25]}, // Am
- {b: 98.00,m:[587.33,493.88,392.00,493.88,587.33,659.25]}, // G
- {b: 87.31,m:[523.25,440.00,349.23,440.00,523.25,587.33]}, // F
- {b: 82.41,m:[493.88,415.30,329.63,415.30,659.25,493.88]}, // E
+const JOTA_B=[
+ {c:"F", m:[523.25,587.33,659.25,698.46,659.25,587.33]},
+ {c:"C", m:[659.25,523.25,392.00,440.00,493.88,523.25]},
+ {c:"G7",m:[587.33,493.88,440.00,392.00,440.00,493.88]},
+ {c:"C", m:[523.25,659.25,523.25,493.88,523.25,523.25]},
 ];
+const TUNE=[...JOTA_A,...JOTA_A,...JOTA_B,...JOTA_B];
 let nextChordTime=0,chordIdx=0;
 function musicLoop(){
  if(!musicOn)return;
- const NOTE=0.27,LOOKAHEAD=0.8;
+ const NOTE=0.22,LOOKAHEAD=0.8;
  while(nextChordTime<AC.currentTime+LOOKAHEAD){
-   const i=chordIdx%4;
-   const seccioMelodia=Math.floor(chordIdx/8)%2===1; // 8 bars d'arpegi, 8 de tonada
-   if(seccioMelodia){
-     const bar=MELODY[i];
-     pluck(bar.b,nextChordTime,0.30);
-     pluck(bar.b*1.5,nextChordTime+3*NOTE,0.12);
-     bar.m.forEach((f,k)=>pluck(f,nextChordTime+k*NOTE,0.15));
-   }else{
-     const bar=BARS[i];
-     bar.forEach((f,k)=>pluck(f,nextChordTime+k*NOTE,k===0?0.30:0.16));
-   }
+   const bar=TUNE[chordIdx%TUNE.length];
+   const ch=JCH[bar.c];
+   pluck(ch[0],nextChordTime,0.26);                    // baix
+   ch.slice(1).forEach((f,k)=>pluck(f,nextChordTime+0.015*(k+1),0.085)); // rasgueig
+   ch.slice(1).forEach((f,k)=>pluck(f,nextChordTime+3*NOTE+0.012*(k+1),0.05)); // contratemps
+   bar.m.forEach((f,k)=>pluck(f,nextChordTime+k*NOTE,0.14)); // melodia
    nextChordTime+=6*NOTE;chordIdx++;
  }
 }
@@ -1358,14 +1365,58 @@ function ensureAC(){
    masterGain.connect(lp);lp.connect(AC.destination);}
  AC.resume();
 }
-function setMusic(mode){ // "gtr" | "off"
+/* ---------------- Ambient de sa cala: ones i qualque gavina ---------------- */
+let seaNodes=null,gullTimer=null,BROWN=null;
+function brownBuf(){
+ if(BROWN)return BROWN;
+ const sr=AC.sampleRate,b=AC.createBuffer(1,sr*4,sr),d=b.getChannelData(0);
+ let last=0;
+ for(let i=0;i<d.length;i++){last=(last+0.02*(Math.random()*2-1))/1.02;d[i]=last*3.5}
+ BROWN=b;return b;
+}
+function startSea(){
+ ensureAC();if(seaNodes)return;
+ const src=AC.createBufferSource();src.buffer=brownBuf();src.loop=true;
+ const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=420;
+ const g=AC.createGain();g.gain.value=0.06;
+ const lfo=AC.createOscillator();lfo.frequency.value=0.08; // ones que van i vénen
+ const lfoG=AC.createGain();lfoG.gain.value=0.04;
+ lfo.connect(lfoG);lfoG.connect(g.gain);
+ src.connect(lp);lp.connect(g);g.connect(masterGain);
+ src.start();lfo.start();
+ seaNodes={src,lfo};
+ gullTimer=setInterval(()=>{if(Math.random()<.45)gavina()},9000);
+}
+function stopSea(){
+ if(seaNodes){try{seaNodes.src.stop();seaNodes.lfo.stop()}catch(e){}seaNodes=null}
+ if(gullTimer){clearInterval(gullTimer);gullTimer=null}
+}
+function gavina(){
+ try{ensureAC();
+  const crit=(t0)=>{
+   const o=AC.createOscillator(),g=AC.createGain();o.type="sine";
+   o.frequency.setValueAtTime(1250,t0);
+   o.frequency.exponentialRampToValueAtTime(880,t0+0.16);
+   o.frequency.exponentialRampToValueAtTime(1120,t0+0.28);
+   g.gain.setValueAtTime(0.0001,t0);
+   g.gain.exponentialRampToValueAtTime(0.04,t0+0.05);
+   g.gain.exponentialRampToValueAtTime(0.0001,t0+0.36);
+   o.connect(g);g.connect(masterGain);o.start(t0);o.stop(t0+0.42);
+  };
+  const t=AC.currentTime+0.1;
+  crit(t);if(Math.random()<.6)crit(t+0.45);
+ }catch(e){}
+}
+
+function setMusic(mode){ // "sea" | "gtr" | "off"
  G.musicMode=mode;
- $("#btnMusic").textContent=mode==="gtr"?"🎸":"🔇";
+ $("#btnMusic").textContent=mode==="sea"?"🌊":mode==="gtr"?"🎸":"🔇";
  $("#btnMusic").style.opacity=mode==="off"?.45:1;
  if(mode==="gtr"){
    ensureAC();musicOn=true;nextChordTime=Math.max(nextChordTime,AC.currentTime+0.1);
    if(!musicTimer)musicTimer=setInterval(musicLoop,200);
  }else{musicOn=false}
+ if(mode==="sea")startSea();else stopSea();
 }
 
 /* ---------------- Sons de cartes (sintetitzats, com tot) ---------------- */
@@ -1401,6 +1452,7 @@ function applyLang(){
  $("#lblDoses").textContent=t("doses");
  $("#btnDosesSi").textContent=t("dosesSi");$("#btnDosesNo").textContent=t("dosesNo");
  $("#lblMusic").textContent=t("music");
+ $("#btnMusicSea").textContent=t("musicSea");
  $("#btnMusicGtr").textContent=t("musicGtr");
  $("#btnMusicOff").textContent=t("musicOff");
  $("#cfgNote").textContent=t("note");
@@ -1419,11 +1471,11 @@ segInit("#segDoses",v=>{G.withDoses=v==="1"});
 segInit("#segMusic",v=>setMusic(v));
 $("#btnStart").onclick=()=>{
  $("#scrConfig").classList.add("hidden");$("#scrGame").classList.remove("hidden");
- setMusic(G.musicMode||"gtr");
+ setMusic(G.musicMode||"sea");
  startMatch();
 };
-$("#btnMusic").onclick=()=>{ // alterna guitarreta/silenci (Joana Pons es tria a l'inici)
- setMusic(G.musicMode==="gtr"?"off":"gtr");
+$("#btnMusic").onclick=()=>{ // cicla: sa cala -> jota -> silenci
+ setMusic(G.musicMode==="sea"?"gtr":G.musicMode==="gtr"?"off":"sea");
 };
 $("#btnHelp").onclick=showSenyesHelp;
 
