@@ -329,6 +329,12 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:60;
 @keyframes screenFade{from{opacity:0;transform:scale(.985)}to{opacity:1;transform:none}}
 #scrGame:not(.hidden){animation:screenFade .38s ease-out}
 
+/* --- Botó de senya persistent (1a volta, independent des torn) --- */
+#btnSenya{width:44px;height:44px;font-size:19px;background:var(--gold2);border-radius:50%;padding:0;border-width:3px}
+@keyframes senyaPulse{0%,100%{box-shadow:0 5px 0 rgba(0,0,0,.4)}
+  50%{box-shadow:0 5px 0 rgba(0,0,0,.4), 0 0 14px rgba(227,179,65,.95)}}
+#btnSenya:not(.hidden){animation:senyaPulse 1.4s ease-in-out infinite}
+
 /* --- Respecta qui no vol moviment --- */
 @media (prefers-reduced-motion:reduce){
   *,*::after,*::before{animation:none!important}
@@ -384,6 +390,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:60;
       <div class="scTeam"><span id="lblElls">ELLS</span><span class="pts" id="ptsE">0</span><span class="cames" id="camE"></span></div>
     </div>
     <div style="display:flex;gap:6px">
+      <button id="btnSenya" class="hidden">😉</button>
       <button id="btnHelp">🤫</button>
       <button id="btnMusic">🎸</button>
     </div>
@@ -466,6 +473,9 @@ const T = {
   victoria:"HEU GUANYAT ES COT! 🏆", derrota:"Han guanyat ells... revenja?",
   novaPartida:"Una altra partida", seguir:"Seguim!", abandonen:"se'n van...",
   lligatTeu:"Es teu lligat", lligatSeu:"Es seu millor lligat",
+  senyaTip:"Fer senya (1a volta)", jaTveig:"Ja t'he vist!",
+  hasCacat:"Has caçat sa senya:", thanCacat:"T'han caçat sa senya!",
+  duu:"duu", capPeca:"no duu res",
  },
  es:{
   subtitle:"El juego de cartas menorquín", lang:"Idioma", doses:"¿Jugar con doses?",
@@ -495,6 +505,9 @@ const T = {
   victoria:"¡HABÉIS GANADO! 🏆", derrota:"Han ganado ellos... ¿revancha?",
   novaPartida:"Otra partida", seguir:"¡Seguimos!", abandonen:"se retiran...",
   lligatTeu:"Tu ligado", lligatSeu:"Su mejor ligado",
+  senyaTip:"Hacer seña (1ª vuelta)", jaTveig:"¡Te he visto!",
+  hasCacat:"Has cazado la seña:", thanCacat:"¡Te han cazado la seña!",
+  duu:"lleva", capPeca:"no lleva nada",
  }
 };
 let LANG="ca";
@@ -939,6 +952,7 @@ function renderTable(){
  m.innerHTML=G.inHand?'<div class="card back"></div><div class="card back"></div><div class="card back"></div>':"";
 }
 function renderActions(){
+ renderSenyaBtn(); // sa senya va per lliure tota sa 1a volta, independent des torn
  if(G.promptActive)return;
  const a=$("#actions");a.innerHTML="";
  if(!(G.inHand&&G.turn===0&&!G.truc.pending&&!G.envit.pending))return;
@@ -958,10 +972,7 @@ function renderActions(){
    const p2=el("button","",t("pitja"));
    p2.onclick=()=>{G.partnerHint="high";bubble(0,t("pitja"),true);renderActions()};a.appendChild(p2);
  }
- // Fer senya (es gest de sa teva millor peça)
- if(!G.flashPlayer){
-   const b=el("button","flash",t("fersenya"));b.onclick=playerSenya;a.appendChild(b);
- }
+ // (sa "Fer senya" ara és es botó persistent de sa barra de dalt: val tota sa 1a volta)
  // Senya d'envit a na Maria (abans que li toqui tirar)
  if(G.baza===1&&G.envit.open&&G.envit.level<0&&!G.askEnvit&&!G.played[2]){
    const b=el("button","flash",t("senyaEnvit"));
@@ -1030,6 +1041,7 @@ function startHand(){
  G.truc={val:1,level:-1,canRaise:null,pending:false};
  G.envit={open:true,accepted:false,val:0,level:-1,pending:false};
  G.flashPlayer=false;G.flashMaria=false;G.mariaKnows=false;
+ G.known={N:{},E:{}};G.senyaDone={};G.handId=(G.handId||0)+1; // senyes d'aquesta mà
  G.askEnvit=false;G.history=[];
  G.leader=G.maSeat;G.turn=G.maSeat;G.inHand=true;
  sfxDeal();
@@ -1037,17 +1049,10 @@ function startHand(){
  G.partnerHint=null;
  G._dealAnim=true; // anima sa repartida d'aquesta mà
  renderTable();renderHand(false);renderActions();
- // sa companya fa sa senya de sa seva millor peça, com a sa taula:
- // un gest que has de saber llegir (botó 🤫 per repassar es codi)
- const sy=senyaForHand(G.hands[2]);
- const willSenya=sy.rank>=7?Math.random()<.7:Math.random()<.3;
- setTimeout(()=>{
-   if(willSenya){G.flashMaria=true;
-     bubble(2,sy.e+" "+t(sy.k));
-     setMsg((LANG==="ca"?"Na ":"")+NAMES[2]+" "+t(sy.k)+"...");
-     setTimeout(nextTurn,1700);}
-   else nextTurn();
- },1500);
+ // tots dos equips poden senyar sa seva millor peça durant sa 1a volta;
+ // un gest que has de saber llegir (botó 🤫 per repassar es codi) i que es pot caçar
+ scheduleAiSenyes();
+ setTimeout(nextTurn,1500);
 }
 /* sa senya tradicional que toca per sa millor peça de sa mà (codi de llevant) */
 function senyaForHand(hand){
@@ -1059,6 +1064,77 @@ function senyaForHand(hand){
  if(hand.some(c=>c.s==="O"&&c.n===7))return{e:"😛",k:"gManO",rank:8};
  if(hand.some(c=>c.n===3))return{e:"😏",k:"gTres",rank:7};
  return{e:"😑",k:"gRes",rank:0};
+}
+/* sa carta de sa millor peça (per saber què s'ha caçat) */
+function bestPecaCard(hand){
+ return hand.find(isAmo)||hand.find(isMadona)
+  ||hand.find(c=>c.s==="E"&&c.n===1)||hand.find(c=>c.s==="B"&&c.n===1)
+  ||hand.find(c=>c.s==="E"&&c.n===7)||hand.find(c=>c.s==="O"&&c.n===7)
+  ||hand.find(c=>c.n===3)||null;
+}
+function senyaCardDesc(k){const r=SENYES_TABLE.find(x=>x[0]===k);return r?r[1]:t("capPeca")}
+
+/* ======= Senyes: tots dos equips, i es poden caçar (param. CAUGHT_P) ======= */
+const CAUGHT_P=0.30; // 30% que s'altre equip caci sa senya
+function scheduleAiSenyes(){
+ const hid=G.handId;
+ for(const seat of [1,2,3]){
+   const sy=senyaForHand(G.hands0snap[seat]);
+   const willSenya=sy.rank>=7?Math.random()<.72:Math.random()<.3;
+   if(!willSenya)continue;
+   const delay=1300+Math.random()*4200; // en qualque moment de sa 1a volta
+   setTimeout(()=>{ if(G.handId===hid&&G.inHand&&!G.matchOver&&G.baza===1) aiSenya(seat) }, delay);
+ }
+}
+function aiSenya(seat){
+ if(seat===2){ if(G.flashMaria)return; G.flashMaria=true; }
+ else { G.senyaDone=G.senyaDone||{}; if(G.senyaDone[seat])return; G.senyaDone[seat]=true; }
+ const sy=senyaForHand(G.hands0snap[seat]);
+ bubble(seat, sy.e+" "+t(sy.k));
+ if(seat===2) setMsg((LANG==="ca"?"Na ":"")+NAMES[2]+" "+t(sy.k)+"...");
+ maybeCatch(seat, sy);
+}
+/* qualcú de s'altre equip caça sa senya? */
+function maybeCatch(signalSeat, sy){
+ if(Math.random()>=CAUGHT_P) return;
+ const sigTeam=teamOf(signalSeat), catchTeam=otherTeam(sigTeam);
+ const catchers=[0,1,2,3].filter(s=>teamOf(s)===catchTeam);
+ const laugher=catchers[Math.floor(Math.random()*catchers.length)];
+ G.known=G.known||{N:{},E:{}};
+ G.known[catchTeam][signalSeat]=sy.rank; // s'altre equip ja sap aquesta peça
+ sfxLaugh();
+ setTimeout(()=>bubble(laugher, "😆 "+t("jaTveig"), true), 250);
+ if(catchTeam==="N"){ // l'hem caçada noltros: te diem quina peça duu es rival
+   toast(t("hasCacat")+" "+NAMES[signalSeat]+" "+t("duu")+" "+senyaCardDesc(sy.k), 3200);
+ }else{ // ens han caçat
+   setTimeout(()=>toast(t("thanCacat"),2400),420);
+ }
+}
+/* sa peça més grossa que s'equip "team" sap d'un rival (−1 si no en sap cap) */
+function knownOppMax(team){
+ const k=G.known&&G.known[team]; if(!k)return -1;
+ let mx=-1; for(const s in k){ if(teamOf(+s)!==team && k[s]>mx) mx=k[s] } return mx;
+}
+/* botó de senya persistent durant sa 1a volta (independent des torn) */
+function renderSenyaBtn(){
+ const b=$("#btnSenya"); if(!b)return;
+ b.classList.toggle("hidden", !(G.inHand&&!G.matchOver&&G.baza===1&&!G.flashPlayer));
+}
+/* sa rialleta des qui caça sa senya (síntesi) */
+function sfxLaugh(){
+ try{ensureAC();const t0=AC.currentTime;
+  for(let k=0;k<4;k++){
+   const o=AC.createOscillator(),g=AC.createGain();o.type="triangle";
+   const base=320-k*22, st=t0+k*0.11;
+   o.frequency.setValueAtTime(base,st);
+   o.frequency.exponentialRampToValueAtTime(base*1.5,st+0.04);
+   o.frequency.exponentialRampToValueAtTime(base*0.9,st+0.1);
+   g.gain.setValueAtTime(0.0001,st);
+   g.gain.exponentialRampToValueAtTime(0.12,st+0.025);
+   g.gain.exponentialRampToValueAtTime(0.0001,st+0.11);
+   o.connect(g);g.connect(masterGain);o.start(st);o.stop(st+0.13);
+  }
+ }catch(e){}
 }
 
 /* ---------------- Torn de joc ---------------- */
@@ -1249,9 +1325,12 @@ function aiRespondTruc(lvl,callerTeam){
  const nxt=lvl+1;
  const farol=Math.random()<.07;
  const agR=G.aggro?G.aggro[respSeat]:1;
- if((st>36||farol)&&nxt<TRUC_CHAIN.length&&Math.random()<.35*agR){proposeTruc("E",respSeat,nxt);return}
+ const km=knownOppMax("E"); // què sap s'equip E de ses cartes des rivals (equip N)
+ if((st>36||farol)&&km<12&&nxt<TRUC_CHAIN.length&&Math.random()<.35*agR){proposeTruc("E",respSeat,nxt);return}
  // accepten sovint, però sense suïcidar-se
- const threshold=stake==="cama"?37:(25+lvl*3);
+ let threshold=stake==="cama"?37:(25+lvl*3);
+ if(km>=12)threshold+=8;             // saben que duen peça grossa: peus de plom
+ else if(km>=0&&km<=7)threshold-=6;  // els han caçat fluixos: més confiats
  if(st>threshold-(agR-1)*12-Math.random()*7)acceptTruc(lvl,callerTeam,respSeat);
  else rejectTruc(lvl,callerTeam,respSeat);
 }
@@ -1346,7 +1425,12 @@ function aiTurn(seat){
    const wantLvl=lvl===0?33:37+lvl*2;
    // trucar més tard (a 2a/3a volta) és més habitual: així es juguen les tres voltes
    const lateBonus=G.baza>=2?0.25:0;
-   if((s2>wantLvl&&Math.random()<(.25+lateBonus)*ag)||Math.random()<.03*ag){proposeTruc(team,seat,lvl);return}
+   // si hem caçat ses senyes des rivals, jugam en conseqüència
+   const km=knownOppMax(team);
+   let trucProb=(.25+lateBonus)*ag;
+   if(km>=12)trucProb*=0.35;            // saben que es rival mana: menys truc
+   else if(km>=0&&km<=7)trucProb*=1.7;  // l'han caçat fluix: més truc
+   if((s2>wantLvl&&Math.random()<trucProb)||Math.random()<.03*ag){proposeTruc(team,seat,lvl);return}
  }
  // 3) jugar carta
  const idx=aiChooseCard(seat);
@@ -1385,12 +1469,13 @@ function aiChooseCard(seat){
 
 /* ---------------- Senya del jugador: fa es gest de sa seva millor peça ---------------- */
 function playerSenya(){
- if(G.flashPlayer)return;
+ if(G.flashPlayer||!G.inHand||G.baza!==1)return; // només una vegada i a sa 1a volta
  G.flashPlayer=true;G.mariaKnows=true;
  const sy=senyaForHand(G.hands0snap[0]);
  bubble(0,sy.e+" "+t(sy.k));
  toast(t("senyaFeta"),1300);
- renderActions();
+ maybeCatch(0,sy); // es rivals te poden caçar sa senya
+ renderSenyaBtn();renderActions();
 }
 /* taula d'ajuda de ses senyes */
 const SENYES_TABLE=[
@@ -1586,6 +1671,8 @@ $("#btnMusic").onclick=()=>{ // cicla: sa cala -> jota -> silenci
  setMusic(G.musicMode==="sea"?"gtr":G.musicMode==="gtr"?"off":"sea");
 };
 $("#btnHelp").onclick=showSenyesHelp;
+$("#btnSenya").onclick=playerSenya;
+$("#btnSenya").title=t("senyaTip");
 
 /* ---------------- Init art ---------------- */
 for(const s of[1,2,3])$("#pl"+s+" .avatar").innerHTML=avatarSVG(s);
