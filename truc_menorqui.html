@@ -335,11 +335,26 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:60;
   50%{box-shadow:0 5px 0 rgba(0,0,0,.4), 0 0 14px rgba(227,179,65,.95)}}
 #btnSenya:not(.hidden){animation:senyaPulse 1.4s ease-in-out infinite}
 
+/* --- Lobby online --- */
+#scrLobby{justify-content:center;gap:14px;padding:16px;text-align:center;
+  background:repeating-linear-gradient(0deg, rgba(34,32,26,.025) 0 2px, transparent 2px 5px),
+    radial-gradient(circle at 50% 15%, #faf4e2 0%, var(--paper) 45%, #ddcca2 100%)}
+#scrLobby .cfgCard{gap:10px}
+#scrLobby .cfgCard > button{width:100%}
+.roomCode{font-size:42px;font-weight:bold;letter-spacing:8px;color:var(--red);background:#fff;
+  border:3px solid var(--ink);border-radius:12px;padding:6px 10px;box-shadow:3px 3px 0 rgba(0,0,0,.3)}
+.lobStatus{font-size:13px;font-weight:bold;min-height:18px;color:var(--wood2)}
+.lobInput{font-family:inherit;font-size:18px;text-align:center;border:3px solid var(--ink);
+  border-radius:10px;padding:8px;width:100%;background:#fff;color:var(--ink);
+  user-select:text;-webkit-user-select:text}
+#segSeat button{font-size:12px;padding:8px 6px}
+
 /* --- Respecta qui no vol moviment --- */
 @media (prefers-reduced-motion:reduce){
   *,*::after,*::before{animation:none!important}
 }
 </style>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
 
@@ -375,9 +390,53 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:60;
     </div>
     <div class="miniNote" id="cfgNote">Tu i na Maria contra en Toni i en Biel. A dues cames de 24!</div>
     <button class="bigStart" id="btnStart">JUGAM? 🃏</button>
-    <div class="miniNote">v1.0 · Cartes: Basquetteur — Wikimedia Commons, CC BY-SA 3.0</div>
+    <button class="bigStart" id="btnOnline" style="background:var(--wood2);font-size:18px;color:#fff">🌐 Jugar online</button>
+    <div class="miniNote">v2.0 · Cartes: Basquetteur — Wikimedia Commons, CC BY-SA 3.0</div>
   </div>
   <div style="width:90px" id="cfgGin"></div>
+</div>
+
+<!-- ================= LOBBY ONLINE (Fase 1) ================= -->
+<div id="scrLobby" class="screen hidden">
+  <div id="titleWrap"><h1 class="logo" style="font-size:min(15vw,68px)">ONLINE</h1></div>
+
+  <!-- triar -->
+  <div id="lobChoose" class="cfgCard comic-border">
+    <button class="bigStart" id="lobCreate">🆕 Crear sala</button>
+    <button class="bigStart" id="lobJoinShow" style="background:var(--wood2);color:#fff">🔑 Unir-me a una sala</button>
+    <button id="lobBack">← Tornar</button>
+  </div>
+
+  <!-- host -->
+  <div id="lobHost" class="cfgCard comic-border hidden">
+    <div class="lbl">Es teu codi de sala:</div>
+    <div id="lobCode" class="roomCode">····</div>
+    <div class="miniNote">Comparteix-lo amb so teu amic perquè entri.</div>
+    <div id="lobHostStatus" class="lobStatus">Esperant que entri qualcú...</div>
+    <div id="lobSeatPick" class="hidden">
+      <div class="lbl" style="margin-bottom:6px">On poses s'amic?</div>
+      <div class="seg" id="segSeat">
+        <button data-seat="2" class="on">🤝 Company</button>
+        <button data-seat="1">😼 Rival dreta</button>
+        <button data-seat="3">😼 Rival esq.</button>
+      </div>
+    </div>
+    <button class="bigStart hidden" id="lobStart">Començar 🃏</button>
+    <button id="lobWaveH" class="hidden">👋 Saluda</button>
+    <button id="lobBack2">← Tornar</button>
+  </div>
+
+  <!-- unir-se -->
+  <div id="lobJoin" class="cfgCard comic-border hidden">
+    <div class="lbl">Es teu nom:</div>
+    <input id="lobName" maxlength="12" placeholder="Es teu nom" class="lobInput">
+    <div class="lbl">Codi de sala:</div>
+    <input id="lobCodeIn" maxlength="4" placeholder="ABCD" class="lobInput" style="text-transform:uppercase;letter-spacing:6px;text-align:center">
+    <button class="bigStart" id="lobEnter">Entrar</button>
+    <div id="lobJoinStatus" class="lobStatus"></div>
+    <button id="lobWaveC" class="hidden">👋 Saluda</button>
+    <button id="lobBack3">← Tornar</button>
+  </div>
 </div>
 
 <!-- ================= GAME SCREEN ================= -->
@@ -1696,6 +1755,100 @@ $("#btnMusic").onclick=()=>{ // cicla: sa cala -> jota -> silenci
 $("#btnHelp").onclick=showSenyesHelp;
 $("#btnSenya").onclick=playerSenya;
 $("#btnSenya").title=t("senyaTip");
+
+/* ====================================================================
+   ONLINE — Fase 1: lobby + connexió (PeerJS, host-autoritatiu)
+   Es host és s'asiento 0; s'amic ocupa es seient que tu triïs; sa IA
+   tapa es dos que queden. (Sa sincronització de partida ve a sa Fase 2.)
+   ==================================================================== */
+function t_(ca,es){return LANG==="es"?es:ca}
+function genCode(){const C="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let s="";for(let i=0;i<4;i++)s+=C[Math.floor(Math.random()*C.length)];return s}
+function lobShow(id){ ["lobChoose","lobHost","lobJoin"].forEach(x=>$("#"+x).classList.toggle("hidden",x!==id)) }
+function openLobby(){ $("#scrConfig").classList.add("hidden"); $("#scrLobby").classList.remove("hidden"); lobShow("lobChoose") }
+function closeLobby(){ NET.cleanup(); $("#scrLobby").classList.add("hidden"); $("#scrConfig").classList.remove("hidden") }
+const NET={
+ role:null, peer:null, conn:null, connected:false,
+ code:"", myName:"", friendName:"", friendSeat:2, mySeat:0,
+ NS:"trucmenorqui-v2-",
+ send(o){ try{ if(this.conn&&this.conn.open) this.conn.send(o) }catch(e){} },
+ cleanup(){ try{this.conn&&this.conn.close()}catch(e){} try{this.peer&&this.peer.destroy()}catch(e){}
+   this.peer=null;this.conn=null;this.connected=false; },
+ createRoom(){
+   if(typeof Peer==="undefined"){toast(t_("No s'ha pogut carregar es mòdul online","No se pudo cargar el módulo online"),3200);return}
+   this.role="host"; this.code=genCode(); lobShow("lobHost");
+   $("#lobCode").textContent=this.code;
+   $("#lobHostStatus").textContent=t_("Esperant que entri qualcú...","Esperando a que entre alguien...");
+   this._mkPeer(this.NS+this.code,true);
+ },
+ joinRoom(name,code){
+   if(typeof Peer==="undefined"){toast(t_("No s'ha pogut carregar es mòdul online","No se pudo cargar el módulo online"),3200);return}
+   this.role="client"; this.myName=name; this.code=code;
+   $("#lobJoinStatus").textContent=t_("Connectant...","Conectando...");
+   this._mkPeer(null,false);
+ },
+ _mkPeer(id,isHost){
+   const self=this;
+   this.peer = id ? new Peer(id) : new Peer();
+   this.peer.on("open",()=>{ if(!isHost){ const c=self.peer.connect(self.NS+self.code,{reliable:true,metadata:{name:self.myName}}); self.conn=c; self._wire(c,false) } });
+   this.peer.on("error",(e)=>{
+     const ty=e&&e.type;
+     if(ty==="unavailable-id"){ self.code=genCode(); $("#lobCode").textContent=self.code; try{self.peer.destroy()}catch(x){} self._mkPeer(self.NS+self.code,true); return; }
+     if(ty==="peer-unavailable"){ $("#lobJoinStatus").textContent=t_("No trob sa sala. Revisa es codi.","No encuentro la sala. Revisa el código."); return; }
+     $("#"+(isHost?"lobHostStatus":"lobJoinStatus")).textContent="Error: "+(ty||e);
+   });
+   if(isHost) this.peer.on("connection",(c)=>{
+     if(self.conn&&self.conn.open){ try{c.close()}catch(x){} return; } // ja hi ha un amic
+     self.friendName=(c.metadata&&c.metadata.name)||self.friendName||"Amic";
+     self.conn=c; self._wire(c,true);
+   });
+ },
+ _wire(c,isHost){
+   const self=this;
+   c.on("open",()=>{
+     self.connected=true;
+     if(isHost){
+       $("#lobHostStatus").textContent=t_("Connectat! ","¡Conectado! ")+(self.friendName||"");
+       $("#lobSeatPick").classList.remove("hidden");
+       $("#lobStart").classList.remove("hidden");
+       $("#lobWaveH").classList.remove("hidden");
+       self.send({t:"seat",seat:self.friendSeat});
+     }else{
+       $("#lobJoinStatus").textContent=t_("Connectat! Esperant que s'amfitrió comenci...","¡Conectado! Esperando al anfitrión...");
+       $("#lobWaveC").classList.remove("hidden");
+       self.send({t:"hello",name:self.myName});
+     }
+   });
+   c.on("data",(m)=>self.onData(m));
+   c.on("close",()=>{ self.connected=false; toast(t_("S'ha tallat sa connexió","Se cortó la conexión"),2600);
+     if(self.role==="host"){ $("#lobHostStatus").textContent=t_("S'amic ha sortit.","El amigo salió.");
+       $("#lobSeatPick").classList.add("hidden"); $("#lobStart").classList.add("hidden"); } });
+ },
+ onData(m){
+   if(!m||!m.t)return;
+   if(m.t==="hello"){ this.friendName=m.name||"Amic"; $("#lobHostStatus").textContent=t_("Connectat! ","¡Conectado! ")+this.friendName; this.send({t:"seat",seat:this.friendSeat}); }
+   else if(m.t==="seat"){ this.mySeat=m.seat; const r=m.seat===2?t_("company de s'amfitrió","compañero del anfitrión"):t_("rival","rival"); $("#lobJoinStatus").textContent=t_("Connectat! Seràs ","¡Conectado! Serás ")+r+". "+t_("Esperant...","Esperando..."); }
+   else if(m.t==="wave"){ toast("👋 "+(m.name||"")+" "+t_("et saluda!","¡te saluda!"),2200); }
+   else if(m.t==="start"){ toast(t_("S'amfitrió comença! (sa partida sincronitzada ve a sa pròxima fase)","¡El anfitrión empieza! (la partida sincronizada llega en la próxima fase)"),3600); }
+ }
+};
+/* wiring lobby */
+$("#btnOnline").onclick=openLobby;
+$("#lobBack").onclick=closeLobby; $("#lobBack2").onclick=closeLobby; $("#lobBack3").onclick=closeLobby;
+$("#lobCreate").onclick=()=>NET.createRoom();
+$("#lobJoinShow").onclick=()=>lobShow("lobJoin");
+$("#lobEnter").onclick=()=>{
+  const name=($("#lobName").value||"").trim()||t_("Amic","Amigo");
+  const code=($("#lobCodeIn").value||"").trim().toUpperCase();
+  if(code.length<4){ $("#lobJoinStatus").textContent=t_("Posa es codi de 4 lletres.","Pon el código de 4 letras."); return; }
+  NET.joinRoom(name,code);
+};
+$("#lobStart").onclick=()=>{ NET.send({t:"start"}); toast(t_("Tot a punt! Sa partida online ve a sa pròxima fase.","¡Todo listo! La partida online llega en la próxima fase."),3400); };
+$("#lobWaveH").onclick=()=>NET.send({t:"wave",name:NET.myName||t_("S'amfitrió","El anfitrión")});
+$("#lobWaveC").onclick=()=>NET.send({t:"wave",name:NET.myName||"Amic"});
+document.querySelectorAll("#segSeat button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("#segSeat button").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on"); NET.friendSeat=+b.dataset.seat; NET.send({t:"seat",seat:NET.friendSeat});
+});
 
 /* ---------------- Init art ---------------- */
 for(const s of[1,2,3])$("#pl"+s+" .avatar").innerHTML=avatarSVG(s);
