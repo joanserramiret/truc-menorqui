@@ -1809,6 +1809,13 @@ function addChatMsg(name,text,who){
 }
 function sendChat(){ const i=$("#chatIn"); const tx=(i.value||"").trim(); if(!tx||!NET.connected)return;
  NET.send({t:"chat",name:NET.myName,text:tx}); addChatMsg(NET.myName,tx,"me"); i.value=""; }
+// servidors per travessar routers (STUN) i, si cal, retransmetre (TURN públic)
+const ICE={iceServers:[
+ {urls:["stun:stun.l.google.com:19302","stun:stun1.l.google.com:19302"]},
+ {urls:"turn:openrelay.metered.ca:80",username:"openrelayproject",credential:"openrelayproject"},
+ {urls:"turn:openrelay.metered.ca:443",username:"openrelayproject",credential:"openrelayproject"},
+ {urls:"turn:openrelay.metered.ca:443?transport=tcp",username:"openrelayproject",credential:"openrelayproject"}
+]};
 const NET={
  role:null, peer:null, conn:null, connected:false,
  code:"", myName:"", friendName:"", friendSeat:2, mySeat:0,
@@ -1828,10 +1835,11 @@ const NET={
    this.role="client"; this.myName=name; this.code=code;
    $("#lobJoinStatus").textContent=t_("Connectant...","Conectando...");
    this._mkPeer(null,false);
+   setTimeout(()=>{ if(!this.connected) $("#lobJoinStatus").textContent=t_("No connecta. Proveu a sa mateixa xarxa o en 2 pestanyes.","No conecta. Probad en la misma red o en 2 pestañas."); },14000);
  },
  _mkPeer(id,isHost){
    const self=this;
-   this.peer = id ? new Peer(id) : new Peer();
+   this.peer = id ? new Peer(id,{config:ICE}) : new Peer({config:ICE});
    this.peer.on("open",()=>{ if(!isHost){ const c=self.peer.connect(self.NS+self.code,{reliable:true,metadata:{name:self.myName}}); self.conn=c; self._wire(c,false) } });
    this.peer.on("error",(e)=>{
      const ty=e&&e.type;
