@@ -336,7 +336,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:60;
 #btnSenya:not(.hidden){animation:senyaPulse 1.4s ease-in-out infinite}
 
 /* --- Lobby online --- */
-#scrLobby{justify-content:center;gap:14px;padding:16px;text-align:center;
+#scrLobby{justify-content:center;gap:14px;padding:16px;text-align:center;overflow-y:auto;
   background:repeating-linear-gradient(0deg, rgba(34,32,26,.025) 0 2px, transparent 2px 5px),
     radial-gradient(circle at 50% 15%, #faf4e2 0%, var(--paper) 45%, #ddcca2 100%)}
 #scrLobby .cfgCard{gap:10px}
@@ -348,6 +348,19 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:60;
   border-radius:10px;padding:8px;width:100%;background:#fff;color:var(--ink);
   user-select:text;-webkit-user-select:text}
 #segSeat button{font-size:12px;padding:8px 6px}
+/* xat des lobby */
+#lobChat{width:min(92vw,380px);display:flex;flex-direction:column;gap:6px}
+#chatLog{height:130px;overflow-y:auto;background:#fff;border:3px solid var(--ink);border-radius:10px;
+  padding:6px 8px;text-align:left;display:flex;flex-direction:column;gap:4px}
+#chatLog .msg{padding:3px 9px;border-radius:11px;border:2px solid var(--ink);max-width:85%;
+  word-break:break-word;font-size:13px;font-weight:bold}
+#chatLog .me{align-self:flex-end;background:var(--gold2)}
+#chatLog .them{align-self:flex-start;background:var(--paper2)}
+#chatLog .sys{align-self:center;font-size:11px;opacity:.6;border:none;font-weight:normal;background:none;padding:1px}
+#chatRow{display:flex;gap:6px}
+#chatIn{flex:1;font-family:inherit;font-size:15px;border:3px solid var(--ink);border-radius:10px;
+  padding:8px;background:#fff;color:var(--ink);user-select:text;-webkit-user-select:text}
+#chatSend{width:48px;font-size:18px;background:var(--red);color:#fff}
 
 /* --- Respecta qui no vol moviment --- */
 @media (prefers-reduced-motion:reduce){
@@ -436,6 +449,15 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:60;
     <div id="lobJoinStatus" class="lobStatus"></div>
     <button id="lobWaveC" class="hidden">👋 Saluda</button>
     <button id="lobBack3">← Tornar</button>
+  </div>
+
+  <!-- xat (apareix en connectar) -->
+  <div id="lobChat" class="hidden">
+    <div id="chatLog"></div>
+    <div id="chatRow">
+      <input id="chatIn" maxlength="140" placeholder="Escriu...">
+      <button id="chatSend">➤</button>
+    </div>
   </div>
 </div>
 
@@ -1764,8 +1786,16 @@ $("#btnSenya").title=t("senyaTip");
 function t_(ca,es){return LANG==="es"?es:ca}
 function genCode(){const C="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let s="";for(let i=0;i<4;i++)s+=C[Math.floor(Math.random()*C.length)];return s}
 function lobShow(id){ ["lobChoose","lobHost","lobJoin"].forEach(x=>$("#"+x).classList.toggle("hidden",x!==id)) }
-function openLobby(){ $("#scrConfig").classList.add("hidden"); $("#scrLobby").classList.remove("hidden"); lobShow("lobChoose") }
-function closeLobby(){ NET.cleanup(); $("#scrLobby").classList.add("hidden"); $("#scrConfig").classList.remove("hidden") }
+function openLobby(){ $("#scrConfig").classList.add("hidden"); $("#scrLobby").classList.remove("hidden");
+  $("#chatLog").innerHTML=""; $("#lobChat").classList.add("hidden"); lobShow("lobChoose") }
+function closeLobby(){ NET.cleanup(); $("#scrLobby").classList.add("hidden"); $("#lobChat").classList.add("hidden"); $("#scrConfig").classList.remove("hidden") }
+function addChatMsg(name,text,who){
+ const log=$("#chatLog"); const d=el("div","msg "+who);
+ d.textContent = who==="sys" ? text : (name?name+": ":"")+text;
+ log.appendChild(d); log.scrollTop=log.scrollHeight;
+}
+function sendChat(){ const i=$("#chatIn"); const tx=(i.value||"").trim(); if(!tx||!NET.connected)return;
+ NET.send({t:"chat",name:NET.myName,text:tx}); addChatMsg(NET.myName,tx,"me"); i.value=""; }
 const NET={
  role:null, peer:null, conn:null, connected:false,
  code:"", myName:"", friendName:"", friendSeat:2, mySeat:0,
@@ -1775,7 +1805,7 @@ const NET={
    this.peer=null;this.conn=null;this.connected=false; },
  createRoom(){
    if(typeof Peer==="undefined"){toast(t_("No s'ha pogut carregar es mòdul online","No se pudo cargar el módulo online"),3200);return}
-   this.role="host"; this.code=genCode(); lobShow("lobHost");
+   this.role="host"; this.myName=this.myName||t_("Amfitrió","Anfitrión"); this.code=genCode(); lobShow("lobHost");
    $("#lobCode").textContent=this.code;
    $("#lobHostStatus").textContent=t_("Esperant que entri qualcú...","Esperando a que entre alguien...");
    this._mkPeer(this.NS+this.code,true);
@@ -1806,6 +1836,8 @@ const NET={
    const self=this;
    c.on("open",()=>{
      self.connected=true;
+     $("#lobChat").classList.remove("hidden");
+     addChatMsg("", t_("Connectats! Ja podeu xerrar.","¡Conectados! Ya podéis hablar."), "sys");
      if(isHost){
        $("#lobHostStatus").textContent=t_("Connectat! ","¡Conectado! ")+(self.friendName||"");
        $("#lobSeatPick").classList.remove("hidden");
@@ -1827,6 +1859,7 @@ const NET={
    if(!m||!m.t)return;
    if(m.t==="hello"){ this.friendName=m.name||"Amic"; $("#lobHostStatus").textContent=t_("Connectat! ","¡Conectado! ")+this.friendName; this.send({t:"seat",seat:this.friendSeat}); }
    else if(m.t==="seat"){ this.mySeat=m.seat; const r=m.seat===2?t_("company de s'amfitrió","compañero del anfitrión"):t_("rival","rival"); $("#lobJoinStatus").textContent=t_("Connectat! Seràs ","¡Conectado! Serás ")+r+". "+t_("Esperant...","Esperando..."); }
+   else if(m.t==="chat"){ addChatMsg(m.name||"", m.text||"", "them"); }
    else if(m.t==="wave"){ toast("👋 "+(m.name||"")+" "+t_("et saluda!","¡te saluda!"),2200); }
    else if(m.t==="start"){ toast(t_("S'amfitrió comença! (sa partida sincronitzada ve a sa pròxima fase)","¡El anfitrión empieza! (la partida sincronizada llega en la próxima fase)"),3600); }
  }
@@ -1849,6 +1882,8 @@ document.querySelectorAll("#segSeat button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll("#segSeat button").forEach(x=>x.classList.remove("on"));
   b.classList.add("on"); NET.friendSeat=+b.dataset.seat; NET.send({t:"seat",seat:NET.friendSeat});
 });
+$("#chatSend").onclick=sendChat;
+$("#chatIn").addEventListener("keydown",e=>{ if(e.key==="Enter"){e.preventDefault();sendChat();} });
 
 /* ---------------- Init art ---------------- */
 for(const s of[1,2,3])$("#pl"+s+" .avatar").innerHTML=avatarSVG(s);
