@@ -681,8 +681,8 @@ function cosSVG(){
 function avatarSVG(seat){
  const L=(G.look&&G.look[seat])||{};
  const id="rg"+seat;
- if(seat===2)return femaleSVG(id,L);
- return maleSVG(id,L);
+ const fem=(L.fem!==undefined)?L.fem:(seat===2); // gènere per persona (per s'online rotat)
+ return fem?femaleSVG(id,L):maleSVG(id,L);
 }
 function maleSVG(id,L){
  const hat=L.hat??0,face=L.face??0,nose=L.nose??0,eyes=L.eyes??0;
@@ -950,7 +950,7 @@ function cardEl(c){
  const pn=pecaName(c);if(pn)d.insertAdjacentHTML("beforeend",`<div class="peca">${pn}</div>`);
  return d;
 }
-function setMsg(s){$("#msgLine").textContent=s}
+function setMsg(s){$("#msgLine").textContent=s; if(G.online==="host"&&typeof pushNet==="function")pushNet();}
 function toast(s,ms=1900){const tdiv=$("#toast");tdiv.textContent=s;tdiv.classList.remove("hidden");
  clearTimeout(toast._t);toast._t=setTimeout(()=>tdiv.classList.add("hidden"),ms)}
 const BUBBLE_POS={0:{left:"50%",top:"88%"},1:{left:"72%",top:"36%"},2:{left:"50%",top:"17%"},3:{left:"28%",top:"36%"}};
@@ -992,6 +992,7 @@ function renderScore(){
  if(pe.textContent!==String(G.score.E)){pe.textContent=G.score.E;if(G.score.E>0)bumpScore(pe)}
  $("#camN").textContent="🥂".repeat(G.cames.N)+"·".repeat(2-G.cames.N);
  $("#camE").textContent="🥂".repeat(G.cames.E)+"·".repeat(2-G.cames.E);
+ if(G.online==="host"&&typeof pushNet==="function")pushNet();
 }
 function renderHand(clickable){
  const h=$("#hand");h.innerHTML="";
@@ -1031,6 +1032,7 @@ function renderTable(){
  const m=$("#mazo"),p=MAZO_POS[G.dealer];
  m.style.left=p.l;m.style.top=p.t;
  m.innerHTML=G.inHand?'<div class="card back"></div><div class="card back"></div><div class="card back"></div>':"";
+ if(G.online==="host"&&typeof pushNet==="function")pushNet();
 }
 function renderActions(){
  renderSenyaBtn(); // sa senya va per lliure tota sa 1a volta, independent des torn
@@ -1047,7 +1049,7 @@ function renderActions(){
    const b=el("button","atk",t(TRUC_CHAIN[lvl][0]));b.onclick=()=>{playerProposeTruc(lvl)};a.appendChild(b);
  }
  // Vine a mi / Pitja: ordres de taula a sa companya (es diuen en veu alta!)
- if(!G.played[2]&&G.hands[2].length>0&&!G.partnerHint){
+ if(!G.played[2]&&G.hands[2].length>0&&!G.partnerHint&&G.online!=="client"){
    const v=el("button","",t("vineAMi"));
    v.onclick=()=>{G.partnerHint="low";bubble(0,t("vineAMi"),true);renderActions()};a.appendChild(v);
    const p2=el("button","",t("pitja"));
@@ -1055,7 +1057,7 @@ function renderActions(){
  }
  // (sa "Fer senya" ara és es botó persistent de sa barra de dalt: val tota sa 1a volta)
  // Senya d'envit a na Maria (abans que li toqui tirar)
- if(G.baza===1&&G.envit.open&&G.envit.level<0&&!G.askEnvit&&!G.played[2]){
+ if(G.baza===1&&G.envit.open&&G.envit.level<0&&!G.askEnvit&&!G.played[2]&&G.online!=="client"){
    const b=el("button","flash",t("senyaEnvit"));
    b.onclick=()=>{G.askEnvit=true;toast(t("senyaEnvitFeta"),1400);renderActions()};
    a.appendChild(b);
@@ -1091,9 +1093,10 @@ function startMatch(){
  const r=n=>Math.floor(Math.random()*n);
  const pick=a=>a[r(a.length)];
  G.look={
-  1:{hat:r(3),face:r(3),nose:r(2),eyes:r(2)},
-  3:{hat:r(3),face:r(3),nose:r(2),eyes:r(2)},
-  2:{ulleres:Math.random()<.4,cab:pick(["#8a7a64","#5b4632","#a8937c"]),moc:pick(["#b5483a","#5b7a9a","#3e7a4e"])}
+  0:{fem:false,hat:r(3),face:r(3),nose:r(2),eyes:r(2)}, // s'amfitrió (només es veu en online)
+  1:{fem:false,hat:r(3),face:r(3),nose:r(2),eyes:r(2)},
+  3:{fem:false,hat:r(3),face:r(3),nose:r(2),eyes:r(2)},
+  2:{fem:true,ulleres:Math.random()<.4,cab:pick(["#8a7a64","#5b4632","#a8937c"]),moc:pick(["#b5483a","#5b7a9a","#3e7a4e"])}
  };
  if(G.look[1].hat===G.look[3].hat&&G.look[1].face===G.look[3].face)G.look[3].hat=(G.look[3].hat+1)%3;
  for(const s of[1,2,3])$("#pl"+s+" .avatar").innerHTML=avatarSVG(s);
@@ -1122,7 +1125,7 @@ function startHand(){
  G.truc={val:1,level:-1,canRaise:null,pending:false};
  G.envit={open:true,accepted:false,val:0,level:-1,pending:false};
  G.flashPlayer=false;G.flashMaria=false;G.mariaKnows=false;
- G.known={N:{},E:{}};G.senyaDone={};G.handId=(G.handId||0)+1; // senyes d'aquesta mà
+ G.known={N:{},E:{}};G.senyaDone={};G.handId=(G.handId||0)+1; G.pendingAsk=null; // senyes/online d'aquesta mà
  G.askEnvit=false;G.history=[];
  G.leader=G.maSeat;G.turn=G.maSeat;G.inHand=true;
  sfxDeal();
@@ -1211,7 +1214,7 @@ function remTo24(team){return 24-G.score[team]} // quant li falta per fer cama
 /* botó de senya persistent durant sa 1a volta (independent des torn) */
 function renderSenyaBtn(){
  const b=$("#btnSenya"); if(!b)return;
- b.classList.toggle("hidden", !(G.inHand&&!G.matchOver&&G.baza===1&&!G.flashPlayer));
+ b.classList.toggle("hidden", !(G.inHand&&!G.matchOver&&G.baza===1&&!G.flashPlayer&&G.online!=="client"));
 }
 /* sa rialleta des qui caça sa senya (síntesi) */
 function sfxLaugh(){
@@ -1236,11 +1239,17 @@ function nextTurn(){
  renderTable();
  if(G.turn===0){setMsg(t("yourTurn")+(G.turn===G.maSeat?" ("+t("maTurn")+")":""));
    renderHand(true);renderActions();}
+ else if(G.online==="host"&&G.turn===NET.friendSeat){ // torn de s'amic remot: esperam sa seva acció
+   setMsg(NAMES[G.turn]+"...");renderHand(false);renderActions();
+   const tok=G.remoteTok=(G.remoteTok||0)+1;
+   setTimeout(()=>{ if(G.online==="host"&&G.inHand&&G.turn===NET.friendSeat&&!G.truc.pending&&!G.envit.pending&&G.remoteTok===tok) aiTurn(G.turn); },45000);
+ }
  else{setMsg(NAMES[G.turn]+"...");renderHand(false);renderActions();
    setTimeout(()=>aiTurn(G.turn),1500+Math.random()*1100);}
 }
 function playerPlays(i){
  if(!(G.inHand&&G.turn===0&&!G.truc.pending&&!G.envit.pending))return;
+ if(G.online==="client"){ NET.send({t:"do",a:"play",idx:i}); return; }
  playCard(0,i);
 }
 function playCard(seat,idx){
@@ -1340,6 +1349,7 @@ function resolveEnvitAtEnd(){
  return false;
 }
 function concede(team){ // me'n vaig
+ if(G.online==="client"){NET.send({t:"do",a:"concede"});return}
  if(!G.inHand)return;G.inHand=false;
  const other=otherTeam(team);
  bubble(team==="N"?0:1,t("menvaig"));
@@ -1359,7 +1369,7 @@ function concede(team){ // me'n vaig
 /* ====================================================================
    APOSTES — TRUC
    ==================================================================== */
-function playerProposeTruc(lvl){proposeTruc("N",0,lvl)}
+function playerProposeTruc(lvl){ if(G.online==="client"){NET.send({t:"do",a:"ptruc",lvl});return} proposeTruc("N",0,lvl) }
 function proposeTruc(team,proposerSeat,lvl){
  G.truc.pending=true;renderActions();
  const seat=proposerSeat;
@@ -1368,6 +1378,7 @@ function proposeTruc(team,proposerSeat,lvl){
  const responder=otherTeam(team);
  setTimeout(()=>{
    if(responder==="N")playerRespondTruc(lvl,team);
+   else if(G.online==="host"&&(NET.friendSeat===1||NET.friendSeat===3))remoteAskTruc(NET.friendSeat,lvl,team);
    else aiRespondTruc(lvl,team);
  },1500);
 }
@@ -1436,7 +1447,7 @@ function aiRespondTruc(lvl,callerTeam){
 /* ====================================================================
    APOSTES — ENVIT
    ==================================================================== */
-function playerProposeEnvit(lvlIdx){proposeEnvit("N",0,Math.max(0,G.envit.level+1))}
+function playerProposeEnvit(lvlIdx){ if(G.online==="client"){NET.send({t:"do",a:"penvit"});return} proposeEnvit("N",0,Math.max(0,G.envit.level+1)) }
 function proposeEnvit(team,seat,lvl){
  G.envit.pending=true;renderActions();
  bubble(seat,t(ENVIT_CHAIN[lvl][0]),true);
@@ -1444,6 +1455,7 @@ function proposeEnvit(team,seat,lvl){
  const responder=otherTeam(team);
  setTimeout(()=>{
    if(responder==="N")playerRespondEnvit(lvl,team);
+   else if(G.online==="host"&&(NET.friendSeat===1||NET.friendSeat===3))remoteAskEnvit(NET.friendSeat,lvl,team);
    else aiRespondEnvit(lvl,team);
  },1500);
 }
@@ -1767,6 +1779,7 @@ segInit("#segLang",v=>{LANG=v;applyLang()});
 segInit("#segDoses",v=>{G.withDoses=v==="1"});
 segInit("#segMusic",v=>setMusic(v));
 $("#btnStart").onclick=()=>{
+ G.online=null; NET.cleanup(); // partida local: res d'online
  $("#scrConfig").classList.add("hidden");$("#scrGame").classList.remove("hidden");
  setMusic(G.musicMode||"sea");
  startMatch();
@@ -1861,9 +1874,114 @@ const NET={
    else if(m.t==="seat"){ this.mySeat=m.seat; const r=m.seat===2?t_("company de s'amfitrió","compañero del anfitrión"):t_("rival","rival"); $("#lobJoinStatus").textContent=t_("Connectat! Seràs ","¡Conectado! Serás ")+r+". "+t_("Esperant...","Esperando..."); }
    else if(m.t==="chat"){ addChatMsg(m.name||"", m.text||"", "them"); }
    else if(m.t==="wave"){ toast("👋 "+(m.name||"")+" "+t_("et saluda!","¡te saluda!"),2200); }
-   else if(m.t==="start"){ toast(t_("S'amfitrió comença! (sa partida sincronitzada ve a sa pròxima fase)","¡El anfitrión empieza! (la partida sincronizada llega en la próxima fase)"),3600); }
+   else if(m.t==="go"){ // s'amfitrió ha començat: passa a sa taula i espera snapshots
+     G.online="client"; setMusic(G.musicMode||"sea");
+     $("#scrLobby").classList.add("hidden"); $("#scrConfig").classList.add("hidden"); $("#scrGame").classList.remove("hidden");
+     $("#msgLine").textContent=t_("Comença sa partida!","¡Empieza la partida!");
+   }
+   else if(m.t==="snap"){ applySnap(m.s); }
+   else if(m.t==="ask"){ if(m.kind==="truc")clientAskTruc(m.lvl); else if(m.kind==="envit")clientAskEnvit(m.lvl); }
+   else if(m.t==="do"){ hostApplyRemote(m); }
+   else if(m.t==="reply"){ hostApplyReply(m); }
  }
 };
+/* ---- Fase 2: snapshot host -> client (mirall de sa taula) ---- */
+function pushNet(){
+ if(G.online!=="host"||!NET.conn||!NET.conn.open)return;
+ const k=NET.friendSeat;
+ const nm=NAMES.slice(); nm[0]=NET.myName||"Amfitrió";
+ NET.send({t:"snap", s:{
+   counts:G.hands.map(h=>h.length),
+   hand:(G.hands[k]||[]).slice(),
+   played:G.played.slice(),
+   history:(G.history||[]).map(b=>({cards:b.cards.slice()})),
+   score:{N:G.score.N,E:G.score.E}, cames:{N:G.cames.N,E:G.cames.E},
+   turn:G.turn,leader:G.leader,dealer:G.dealer,maSeat:G.maSeat,baza:G.baza,
+   inHand:G.inHand,matchOver:G.matchOver,
+   truc:{val:G.truc.val,level:G.truc.level,canRaise:G.truc.canRaise,pending:G.truc.pending},
+   envit:{open:G.envit.open,accepted:G.envit.accepted,val:G.envit.val,level:G.envit.level,pending:G.envit.pending},
+   names:nm, look:[G.look[0]||{},G.look[1]||{},G.look[2]||{},G.look[3]||{}],
+   msg:$("#msgLine").textContent
+ }});
+}
+function applySnap(s){
+ if(G.online!=="host")G.online="client";
+ const k=NET.mySeat||0;
+ const rot=a=>{const r=[];for(let d=0;d<4;d++)r[d]=a?a[(d+k)%4]:null;return r};
+ if($("#scrGame").classList.contains("hidden")){
+   $("#scrLobby").classList.add("hidden");$("#scrConfig").classList.add("hidden");$("#scrGame").classList.remove("hidden");
+ }
+ G.hands=[];
+ for(let d=0;d<4;d++){ const abs=(d+k)%4; G.hands[d]= abs===k ? (s.hand||[]).slice() : new Array(s.counts[abs]||0).fill({back:1}); }
+ G.played=rot(s.played);
+ G.history=(s.history||[]).map(b=>({cards:rot(b.cards),winner:null}));
+ const nmR=rot(s.names); for(let d=0;d<4;d++)NAMES[d]=nmR[d]||"";
+ const lkR=rot(s.look); G.look={}; for(let d=0;d<4;d++)G.look[d]=lkR[d]||{};
+ G.turn=((s.turn-k)%4+4)%4; G.leader=((s.leader-k)%4+4)%4;
+ G.dealer=((s.dealer-k)%4+4)%4; G.maSeat=((s.maSeat-k)%4+4)%4;
+ G.baza=s.baza; G.inHand=s.inHand; G.matchOver=s.matchOver;
+ if(k%2===0){ G.score={N:s.score.N,E:s.score.E}; G.cames={N:s.cames.N,E:s.cames.E}; }
+ else { G.score={N:s.score.E,E:s.score.N}; G.cames={N:s.cames.E,E:s.cames.N}; }
+ G.truc=Object.assign({},s.truc); G.envit=Object.assign({},s.envit);
+ if(k%2===1){ // s'equip des client es mostra com a "N": cal girar a qui pot pujar
+   if(G.truc.canRaise==="N")G.truc.canRaise="E"; else if(G.truc.canRaise==="E")G.truc.canRaise="N";
+ }
+ for(const d of [1,2,3]){ $("#pl"+d+" .pname").textContent=NAMES[d]||""; $("#pl"+d+" .avatar").innerHTML=avatarSVG(d); }
+ renderScore(); renderTable(); renderHand(false);
+ $("#msgLine").textContent=s.msg||"";
+ // si és es teu torn, pots jugar i apostar (es client reutilitza sa UI des seient 0)
+ if(!G.promptActive) $("#actions").innerHTML="";
+ if(G.online==="client" && G.inHand && G.turn===0 && !G.truc.pending && !G.envit.pending && !G.promptActive){
+   renderHand(true); renderActions();
+ }
+}
+
+/* ---- Fase 3: s'amic juga i aposta de veritat ---- */
+// HOST: aplica accions que arriben des client
+function hostApplyRemote(m){
+ if(G.online!=="host")return; const fs=NET.friendSeat;
+ if(m.a==="play"){ if(G.inHand&&G.turn===fs&&!G.truc.pending&&!G.envit.pending){ const i=m.idx; if(i>=0&&i<G.hands[fs].length)playCard(fs,i); } }
+ else if(m.a==="ptruc"){ if(G.inHand&&G.turn===fs&&!G.truc.pending&&!G.envit.pending){ const lvl=G.truc.level+1; const cr=G.truc.canRaise; if(lvl<TRUC_CHAIN.length&&(cr===null||cr===teamOf(fs)))proposeTruc(teamOf(fs),fs,lvl); } }
+ else if(m.a==="penvit"){ if(G.inHand&&G.turn===fs&&G.baza===1&&G.envit.open&&G.envit.level<0&&!G.truc.pending&&!G.envit.pending)proposeEnvit(teamOf(fs),fs,Math.max(0,G.envit.level+1)); }
+ else if(m.a==="concede"){ if(G.inHand)concede(teamOf(fs)); }
+}
+function hostApplyReply(m){
+ if(G.online!=="host")return; const pa=G.pendingAsk; if(!pa)return; G.pendingAsk=null; const seat=pa.seat;
+ if(pa.kind==="truc"){
+   if(m.choice==="raise")proposeTruc(teamOf(seat),seat,pa.lvl+1);
+   else if(m.choice==="accept")acceptTruc(pa.lvl,pa.callerTeam,seat);
+   else rejectTruc(pa.lvl,pa.callerTeam,seat);
+ }else if(pa.kind==="envit"){
+   if(m.choice==="raise")proposeEnvit(teamOf(seat),seat,pa.lvl+1);
+   else if(m.choice==="accept")acceptEnvit(pa.lvl,pa.callerTeam,seat);
+   else rejectEnvit(pa.lvl,pa.callerTeam,seat);
+ }
+}
+function remoteAskTruc(seat,lvl,callerTeam){
+ G.pendingAsk={kind:"truc",lvl,callerTeam,seat};
+ NET.send({t:"ask",kind:"truc",lvl,callerTeam});
+ setTimeout(()=>{ if(G.pendingAsk&&G.pendingAsk.kind==="truc"&&G.pendingAsk.lvl===lvl){ G.pendingAsk=null; aiRespondTruc(lvl,callerTeam); } },25000);
+}
+function remoteAskEnvit(seat,lvl,callerTeam){
+ G.pendingAsk={kind:"envit",lvl,callerTeam,seat};
+ NET.send({t:"ask",kind:"envit",lvl,callerTeam});
+ setTimeout(()=>{ if(G.pendingAsk&&G.pendingAsk.kind==="envit"&&G.pendingAsk.lvl===lvl){ G.pendingAsk=null; aiRespondEnvit(lvl,callerTeam); } },25000);
+}
+// CLIENT: mostra es prompt de resposta i contesta
+function clientAskTruc(lvl){
+ const nxt=lvl+1; const btns=[[t("vull"),"safe",()=>cReply("accept")]];
+ if(nxt<TRUC_CHAIN.length)btns.push([t(TRUC_CHAIN[nxt][0]),"atk",()=>cReply("raise")]);
+ btns.push([t("novull"),"",()=>cReply("reject")]);
+ showPrompt(t("trucPregunta")+" "+(TRUC_CHAIN[lvl][2]==="cama"?t("cama"):TRUC_CHAIN[lvl][2]+" "+t("punts")),btns);
+}
+function clientAskEnvit(lvl){
+ const nxt=lvl+1; const btns=[[t("vull"),"safe",()=>cReply("accept")]];
+ if(nxt<ENVIT_CHAIN.length)btns.push([t(ENVIT_CHAIN[nxt][0]),"atk",()=>cReply("raise")]);
+ btns.push([t("novull"),"",()=>cReply("reject")]);
+ showPrompt(t("envitPregunta")+" "+(ENVIT_CHAIN[lvl][2]==="tots"?t("tots"):ENVIT_CHAIN[lvl][2]+" "+t("punts")),btns);
+}
+function cReply(choice){ G.promptActive=false; $("#actions").innerHTML=""; NET.send({t:"reply",choice}); }
+
 /* wiring lobby */
 $("#btnOnline").onclick=openLobby;
 $("#lobBack").onclick=closeLobby; $("#lobBack2").onclick=closeLobby; $("#lobBack3").onclick=closeLobby;
@@ -1875,7 +1993,15 @@ $("#lobEnter").onclick=()=>{
   if(code.length<4){ $("#lobJoinStatus").textContent=t_("Posa es codi de 4 lletres.","Pon el código de 4 letras."); return; }
   NET.joinRoom(name,code);
 };
-$("#lobStart").onclick=()=>{ NET.send({t:"start"}); toast(t_("Tot a punt! Sa partida online ve a sa pròxima fase.","¡Todo listo! La partida online llega en la próxima fase."),3400); };
+$("#lobStart").onclick=()=>{
+  if(!NET.connected){ toast(t_("Encara no hi ha ningú connectat.","Aún no hay nadie conectado."),2400); return; }
+  NET.send({t:"seat",seat:NET.friendSeat}); NET.send({t:"go"});
+  G.online="host"; NET.mySeat=0;
+  $("#scrLobby").classList.add("hidden"); $("#scrConfig").classList.add("hidden"); $("#scrGame").classList.remove("hidden");
+  setMusic(G.musicMode||"sea");
+  startMatch();
+  if(NET.friendSeat){ NAMES[NET.friendSeat]=NET.friendName||"Amic"; $("#pl"+NET.friendSeat+" .pname").textContent=NAMES[NET.friendSeat]; pushNet(); }
+};
 $("#lobWaveH").onclick=()=>NET.send({t:"wave",name:NET.myName||t_("S'amfitrió","El anfitrión")});
 $("#lobWaveC").onclick=()=>NET.send({t:"wave",name:NET.myName||"Amic"});
 document.querySelectorAll("#segSeat button").forEach(b=>b.onclick=()=>{
