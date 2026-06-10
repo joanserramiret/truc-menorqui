@@ -953,11 +953,31 @@ function setMsg(s){$("#msgLine").textContent=s; if(G.online==="host"&&typeof pus
 function toast(s,ms=1900){const tdiv=$("#toast");tdiv.textContent=s;tdiv.classList.remove("hidden");
  clearTimeout(toast._t);toast._t=setTimeout(()=>tdiv.classList.add("hidden"),ms)}
 const BUBBLE_POS={0:{left:"50%",top:"88%"},1:{left:"72%",top:"36%"},2:{left:"50%",top:"17%"},3:{left:"28%",top:"36%"}};
-function bubble(seat,txt,shout){
- if(G.online==="host")NET.send({t:"evt",k:"bubble",seat:seat,txt:txt,shout:!!shout}); // que s'amic vegi ses senyes/crits
+function bubbleLocal(seat,txt,shout){
  const b=el("div","bubble"+(shout?" shout":""),txt);
  const p=BUBBLE_POS[seat];b.style.left=p.left;b.style.top=p.top;
  $("#tableInner").appendChild(b);setTimeout(()=>b.remove(),2400);
+}
+/* bafarada pública (crits de truc/envit, ordres, rialles): la veuen tots */
+function bubble(seat,txt,shout){
+ if(G.online==="host")NET.send({t:"evt",k:"bubble",seat:seat,txt:txt,shout:!!shout});
+ bubbleLocal(seat,txt,shout);
+}
+/* ses SENYES són secretes: només les veu es mateix equip de qui senya.
+   Ets rivals només se n'enteren si la cacen (param. CAUGHT_P). */
+function senyaShow(seat,txt){
+ const tm=teamOf(seat);
+ if(G.online==="host"){
+   if(teamOf(0)===tm) bubbleLocal(seat,txt);
+   if(NET.conn&&NET.conn.open&&teamOf(NET.friendSeat)===tm) NET.send({t:"evt",k:"senyabub",seat:seat,txt:txt});
+ }else{ if(teamOf(0)===tm) bubbleLocal(seat,txt); }
+}
+/* toast dirigit només a un equip (per ses revelacions de caçar senyes) */
+function teamToast(team,txt){
+ if(G.online==="host"){
+   if(teamOf(0)===team) toast(txt,3000);
+   if(NET.conn&&NET.conn.open&&teamOf(NET.friendSeat)===team) NET.send({t:"evt",k:"toast",txt:txt});
+ }else{ if(teamOf(0)===team) toast(txt,3000); }
 }
 /* mazo de sobrants: cantó entre el repartidor i el jugador mà */
 const MAZO_POS={0:{l:"74%",t:"72%"},1:{l:"74%",t:"26%"},2:{l:"26%",t:"26%"},3:{l:"26%",t:"72%"}};
@@ -1175,8 +1195,7 @@ function aiSenya(seat){
  if(seat===2){ if(G.flashMaria)return; G.flashMaria=true; }
  else { G.senyaDone=G.senyaDone||{}; if(G.senyaDone[seat])return; G.senyaDone[seat]=true; }
  const sy=senyaForHand(G.hands0snap[seat]);
- bubble(seat, sy.e+" "+t(sy.k));
- if(seat===2) setMsg((LANG==="ca"?"Na ":"")+NAMES[2]+" "+t(sy.k)+"...");
+ senyaShow(seat, sy.e+" "+t(sy.k)); // només la veu es seu equip
  maybeCatch(seat, sy);
 }
 /* qualcú de s'altre equip caça sa senya? */
@@ -1188,12 +1207,10 @@ function maybeCatch(signalSeat, sy){
  G.known=G.known||{N:{},E:{}};
  G.known[catchTeam][signalSeat]=sy.rank; // s'altre equip ja sap aquesta peça
  sfxLaugh();
- setTimeout(()=>bubble(laugher, "😆 "+t("jaTveig"), true), 250);
- if(catchTeam==="N"){ // l'hem caçada noltros: te diem quina peça duu es rival
-   toast(t("hasCacat")+" "+NAMES[signalSeat]+" "+t("duu")+" "+senyaCardDesc(sy.k), 3200);
- }else{ // ens han caçat
-   setTimeout(()=>toast(t("thanCacat"),2400),420);
- }
+ setTimeout(()=>bubble(laugher, "😆 "+t("jaTveig"), true), 250); // sa rialla la senten tots
+ const nm = signalSeat===0 ? (NET.myName||NAMES[0]) : NAMES[signalSeat];
+ teamToast(catchTeam, t("hasCacat")+" "+nm+" "+t("duu")+" "+senyaCardDesc(sy.k)); // qui caça, sap sa carta
+ setTimeout(()=>teamToast(sigTeam, t("thanCacat")), 420);                          // a qui cacen, l'avisam
 }
 /* sa peça més grossa que s'equip "team" sap d'un rival (−1 si no en sap cap) */
 function knownOppMax(team){
@@ -1596,7 +1613,7 @@ function playerSenya(){
  if(G.online==="client"){ G.flashPlayer=true; NET.send({t:"do",a:"senya"}); renderSenyaBtn(); return; }
  G.flashPlayer=true;G.mariaKnows=true;
  const sy=senyaForHand(G.hands0snap[0]);
- bubble(0,sy.e+" "+t(sy.k));
+ senyaShow(0,sy.e+" "+t(sy.k)); // només la veu es teu equip
  toast(t("senyaFeta"),1300);
  maybeCatch(0,sy); // es rivals te poden caçar sa senya
  renderSenyaBtn();renderActions();
@@ -1839,7 +1856,11 @@ const NET={
      $("#msgLine").textContent=t_("Comença sa partida!","¡Empieza la partida!");
    }
    else if(m.t==="snap"){ applySnap(m.s); }
-   else if(m.t==="evt"){ if(m.k==="bubble"){ const d=((m.seat-(NET.mySeat||0))%4+4)%4; bubble(d,m.txt,m.shout); } }
+   else if(m.t==="evt"){
+     if(m.k==="bubble"){ const d=((m.seat-(NET.mySeat||0))%4+4)%4; bubbleLocal(d,m.txt,m.shout); }
+     else if(m.k==="senyabub"){ const d=((m.seat-(NET.mySeat||0))%4+4)%4; bubbleLocal(d,m.txt); }
+     else if(m.k==="toast"){ toast(m.txt,3000); }
+   }
    else if(m.t==="ask"){ if(m.kind==="truc")clientAskTruc(m.lvl); else if(m.kind==="envit")clientAskEnvit(m.lvl); }
    else if(m.t==="do"){ hostApplyRemote(m); }
    else if(m.t==="reply"){ hostApplyReply(m); }
