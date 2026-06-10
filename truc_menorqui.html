@@ -954,6 +954,7 @@ function toast(s,ms=1900){const tdiv=$("#toast");tdiv.textContent=s;tdiv.classLi
  clearTimeout(toast._t);toast._t=setTimeout(()=>tdiv.classList.add("hidden"),ms)}
 const BUBBLE_POS={0:{left:"50%",top:"88%"},1:{left:"72%",top:"36%"},2:{left:"50%",top:"17%"},3:{left:"28%",top:"36%"}};
 function bubble(seat,txt,shout){
+ if(G.online==="host")NET.send({t:"evt",k:"bubble",seat:seat,txt:txt,shout:!!shout}); // que s'amic vegi ses senyes/crits
  const b=el("div","bubble"+(shout?" shout":""),txt);
  const p=BUBBLE_POS[seat];b.style.left=p.left;b.style.top=p.top;
  $("#tableInner").appendChild(b);setTimeout(()=>b.remove(),2400);
@@ -1162,6 +1163,7 @@ const CAUGHT_P=0.30; // 30% que s'altre equip caci sa senya
 function scheduleAiSenyes(){
  const hid=G.handId;
  for(const seat of [1,2,3]){
+   if(G.online==="host"&&seat===NET.friendSeat)continue; // s'amic remot fa ses pròpies senyes
    const sy=senyaForHand(G.hands0snap[seat]);
    const willSenya=sy.rank>=7?Math.random()<.72:Math.random()<.3;
    if(!willSenya)continue;
@@ -1213,7 +1215,7 @@ function remTo24(team){return 24-G.score[team]} // quant li falta per fer cama
 /* botó de senya persistent durant sa 1a volta (independent des torn) */
 function renderSenyaBtn(){
  const b=$("#btnSenya"); if(!b)return;
- b.classList.toggle("hidden", !(G.inHand&&!G.matchOver&&G.baza===1&&!G.flashPlayer&&G.online!=="client"));
+ b.classList.toggle("hidden", !(G.inHand&&!G.matchOver&&G.baza===1&&!G.flashPlayer));
 }
 /* sa rialleta des qui caça sa senya (síntesi) */
 function sfxLaugh(){
@@ -1591,6 +1593,7 @@ function aiChooseCard(seat){
 /* ---------------- Senya del jugador: fa es gest de sa seva millor peça ---------------- */
 function playerSenya(){
  if(G.flashPlayer||!G.inHand||G.baza!==1)return; // només una vegada i a sa 1a volta
+ if(G.online==="client"){ G.flashPlayer=true; NET.send({t:"do",a:"senya"}); renderSenyaBtn(); return; }
  G.flashPlayer=true;G.mariaKnows=true;
  const sy=senyaForHand(G.hands0snap[0]);
  bubble(0,sy.e+" "+t(sy.k));
@@ -1836,6 +1839,7 @@ const NET={
      $("#msgLine").textContent=t_("Comença sa partida!","¡Empieza la partida!");
    }
    else if(m.t==="snap"){ applySnap(m.s); }
+   else if(m.t==="evt"){ if(m.k==="bubble"){ const d=((m.seat-(NET.mySeat||0))%4+4)%4; bubble(d,m.txt,m.shout); } }
    else if(m.t==="ask"){ if(m.kind==="truc")clientAskTruc(m.lvl); else if(m.kind==="envit")clientAskEnvit(m.lvl); }
    else if(m.t==="do"){ hostApplyRemote(m); }
    else if(m.t==="reply"){ hostApplyReply(m); }
@@ -1862,7 +1866,7 @@ function _sendSnap(){
    played:G.played.slice(),
    history:(G.history||[]).map(b=>({cards:b.cards.slice()})),
    score:{N:G.score.N,E:G.score.E}, cames:{N:G.cames.N,E:G.cames.E},
-   turn:G.turn,leader:G.leader,dealer:G.dealer,maSeat:G.maSeat,baza:G.baza,
+   turn:G.turn,leader:G.leader,dealer:G.dealer,maSeat:G.maSeat,baza:G.baza,handId:G.handId,
    inHand:G.inHand,matchOver:G.matchOver,
    truc:{val:G.truc.val,level:G.truc.level,canRaise:G.truc.canRaise,pending:G.truc.pending},
    envit:{open:G.envit.open,accepted:G.envit.accepted,val:G.envit.val,level:G.envit.level,pending:G.envit.pending},
@@ -1873,6 +1877,7 @@ function _sendSnap(){
 function applySnap(s){
  if(G.online!=="host")G.online="client";
  if(typeof s.mySeat==="number")NET.mySeat=s.mySeat; // es seient real ve dins es snapshot (per si es va perdre al lobby)
+ if(s.handId!==G._lastHandId){ G._lastHandId=s.handId; G.flashPlayer=false; } // mà nova: es client pot tornar a senyar
  const k=NET.mySeat||0;
  const rot=a=>{const r=[];for(let d=0;d<4;d++)r[d]=a?a[(d+k)%4]:null;return r};
  if($("#scrGame").classList.contains("hidden")){
@@ -1901,6 +1906,7 @@ function applySnap(s){
  if(G.online==="client" && G.inHand && G.turn===0 && !G.truc.pending && !G.envit.pending && !G.promptActive){
    renderHand(true); renderActions();
  }
+ if(G.online==="client") renderSenyaBtn(); // sa senya va per lliure tota sa 1a volta
 }
 
 /* ---- Fase 3: s'amic juga i aposta de veritat ---- */
@@ -1911,6 +1917,7 @@ function hostApplyRemote(m){
  else if(m.a==="ptruc"){ if(G.inHand&&G.turn===fs&&!G.truc.pending&&!G.envit.pending){ const lvl=G.truc.level+1; const cr=G.truc.canRaise; if(lvl<TRUC_CHAIN.length&&(cr===null||cr===teamOf(fs)))proposeTruc(teamOf(fs),fs,lvl); } }
  else if(m.a==="penvit"){ if(G.inHand&&G.turn===fs&&G.baza===1&&G.envit.open&&G.envit.level<0&&!G.truc.pending&&!G.envit.pending)proposeEnvit(teamOf(fs),fs,Math.max(0,G.envit.level+1)); }
  else if(m.a==="concede"){ if(G.inHand)concede(teamOf(fs)); }
+ else if(m.a==="senya"){ if(G.inHand&&G.baza===1)aiSenya(fs); } // s'amic fa sa seva senya
 }
 function hostApplyReply(m){
  if(G.online!=="host")return; const pa=G.pendingAsk; if(!pa)return; G.pendingAsk=null; const seat=pa.seat;
