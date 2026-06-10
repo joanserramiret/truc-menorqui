@@ -1250,9 +1250,9 @@ function playerPlays(i){
  if(!(G.inHand&&G.turn===0&&!G.truc.pending&&!G.envit.pending))return;
  if(G.online==="client"){
    NET.send({t:"do",a:"play",idx:i});
-   // feedback immediat: lleva sa carta de sa mà i espera s'estat des host
-   if(i>=0&&i<G.hands[0].length)G.hands[0].splice(i,1);
-   renderHand(false); $("#actions").innerHTML=""; setMsg(t_("Esperant...","Esperando..."));
+   // feedback immediat: mou sa carta de sa mà a sa taula (s'estat real ve des host)
+   if(i>=0&&i<G.hands[0].length){ const c=G.hands[0].splice(i,1)[0]; if(c)G.played[0]=c; }
+   renderHand(false); renderTable(); $("#actions").innerHTML="";
    return;
  }
  playCard(0,i);
