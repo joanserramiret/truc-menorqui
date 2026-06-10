@@ -396,8 +396,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:60;
     <div class="cfgRow">
       <span class="lbl" id="lblMusic">Música</span>
       <div class="seg" id="segMusic">
-        <button data-v="sea" class="on" id="btnMusicSea">🌊 Sa cala</button>
-        <button data-v="gtr" id="btnMusicGtr">🎸</button>
+        <button data-v="music" class="on" id="btnMusicOn">🎵 Música</button>
         <button data-v="off" id="btnMusicOff">🔇</button>
       </div>
     </div>
@@ -529,7 +528,7 @@ const T = {
  ca:{
   subtitle:"Es joc de cartes menorquí", lang:"Idioma", doses:"Jugar amb dosos?",
   dosesSi:"Sí (30)", dosesNo:"No (26)", music:"Música",
-  musicSea:"🌊 Sa cala", musicGtr:"🎸 Jota", musicOff:"🔇",
+  musicOn:"🎵 Música", musicSea:"🌊 Sa cala", musicGtr:"🎸 Jota", musicOff:"🔇",
   note:"Tu i na Maria contra en Toni i en Biel. A dues cames de 24!",
   start:"JUGAM? 🃏", noltros:"NOLTROS", ells:"ELLS",
   you:"Tu", deals:"reparteix", yourTurn:"Et toca tirar!", maTurn:"ets mà",
@@ -561,7 +560,7 @@ const T = {
  es:{
   subtitle:"El juego de cartas menorquín", lang:"Idioma", doses:"¿Jugar con doses?",
   dosesSi:"Sí (30)", dosesNo:"No (26)", music:"Música",
-  musicSea:"🌊 La cala", musicGtr:"🎸 Jota", musicOff:"🔇",
+  musicOn:"🎵 Música", musicSea:"🌊 La cala", musicGtr:"🎸 Jota", musicOff:"🔇",
   note:"Tú y Maria contra Toni y Biel. ¡A dos cames de 24!",
   start:"¿JUGAMOS? 🃏", noltros:"NOSOTROS", ells:"ELLOS",
   you:"Tú", deals:"reparte", yourTurn:"¡Te toca tirar!", maTurn:"eres mà",
@@ -929,7 +928,7 @@ const ENVIT_CHAIN=[
  ["envit",1,2],["joenvit",2,4],["dosmes",4,6],["tots",6,"tots"]];
 
 const G={
- withDoses:true, musicMode:"sea",
+ withDoses:true, musicMode:"music",
  score:{N:0,E:0}, cames:{N:0,E:0},
  dealer:3, maSeat:0, hands:[[],[],[],[]], played:[null,null,null,null],
  trickWinners:[], leader:0, turn:0, baza:1,
@@ -1667,6 +1666,92 @@ function musicLoop(){
    nextChordTime+=6*NOTE;chordIdx++;
  }
 }
+/* ====================================================================
+   MÚSICA — Smooth jazz (tot sintetitzat, sense cap obra de tercers)
+   Piano Rhodes + contrabaix + escombretes + melodia, amb progressions
+   que van rodant (sona com a diverses cançons). Reverb suau.
+   ==================================================================== */
+let JNOISE=null;
+function noiseBuf2(){ if(JNOISE)return JNOISE;
+ const sr=AC.sampleRate,b=AC.createBuffer(1,Math.floor(sr*0.4),sr),d=b.getChannelData(0);
+ for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1; JNOISE=b;return b; }
+let jazzBus=null;
+function jazzReverb(){ if(jazzBus)return jazzBus;
+ const d=AC.createDelay(0.6); d.delayTime.value=0.16;
+ const fb=AC.createGain(); fb.gain.value=0.30;
+ const lp=AC.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=2600;
+ const out=AC.createGain(); out.gain.value=0.5;
+ d.connect(lp); lp.connect(fb); fb.connect(d); lp.connect(out); out.connect(masterGain);
+ jazzBus={in:d}; return jazzBus; }
+function jEnv(when,dur,peak,atk){ const g=AC.createGain(); const a=atk||0.01;
+ g.gain.setValueAtTime(0.0001,when); g.gain.exponentialRampToValueAtTime(peak,when+a);
+ g.gain.exponentialRampToValueAtTime(0.0001,when+dur); return g; }
+function rhodes(freq,when,dur,vol){ // piano elèctric Rhodes (FM suau amb campaneta)
+ const car=AC.createOscillator(); car.type="sine"; car.frequency.value=freq;
+ const mod=AC.createOscillator(); mod.type="sine"; mod.frequency.value=freq*2;
+ const mg=AC.createGain(); mg.gain.setValueAtTime(freq*1.1,when); mg.gain.exponentialRampToValueAtTime(freq*0.04,when+0.22);
+ mod.connect(mg); mg.connect(car.frequency);
+ const g=jEnv(when,dur,vol,0.006);
+ const lp=AC.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=2400;
+ car.connect(g); g.connect(lp); lp.connect(masterGain);
+ const rev=AC.createGain(); rev.gain.value=vol*0.4; lp.connect(rev); rev.connect(jazzReverb().in);
+ car.start(when); mod.start(when); car.stop(when+dur+0.05); mod.stop(when+dur+0.05); }
+function upbass(freq,when,dur,vol){ // contrabaix
+ const o=AC.createOscillator(); o.type="triangle"; o.frequency.value=freq;
+ const g=AC.createGain(); g.gain.setValueAtTime(0.0001,when); g.gain.exponentialRampToValueAtTime(vol,when+0.02); g.gain.exponentialRampToValueAtTime(0.0001,when+dur);
+ const lp=AC.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=300;
+ o.connect(g); g.connect(lp); lp.connect(masterGain); o.start(when); o.stop(when+dur+0.05); }
+function jbrush(when,vol,hz){ // escombreta de bateria
+ const s=AC.createBufferSource(); s.buffer=noiseBuf2();
+ const hp=AC.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=hz||5000;
+ const g=AC.createGain(); g.gain.setValueAtTime(vol,when); g.gain.exponentialRampToValueAtTime(0.0001,when+0.13);
+ s.connect(hp); hp.connect(g); g.connect(masterGain); s.start(when); s.stop(when+0.25); }
+function jkick(when,vol){
+ const o=AC.createOscillator(); o.type="sine"; o.frequency.setValueAtTime(105,when); o.frequency.exponentialRampToValueAtTime(45,when+0.12);
+ const g=AC.createGain(); g.gain.setValueAtTime(vol,when); g.gain.exponentialRampToValueAtTime(0.0001,when+0.16);
+ o.connect(g); g.connect(masterGain); o.start(when); o.stop(when+0.2); }
+function jlead(freq,when,dur,vol){ // melodia tipus sordina
+ const o=AC.createOscillator(); o.type="triangle"; o.frequency.value=freq;
+ const g=jEnv(when,dur,vol,0.05);
+ const lp=AC.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=1500;
+ o.connect(g); g.connect(lp); lp.connect(masterGain);
+ const rev=AC.createGain(); rev.gain.value=vol*0.6; lp.connect(rev); rev.connect(jazzReverb().in);
+ o.start(when); o.stop(when+dur+0.05); }
+const JCHORDS={
+ Cmaj7:{b:130.81,n:[196.00,246.94,293.66,329.63]},
+ Am7:  {b:110.00,n:[220.00,261.63,329.63,392.00]},
+ Dm7:  {b:146.83,n:[220.00,261.63,293.66,349.23]},
+ G7:   {b:98.00, n:[196.00,246.94,293.66,349.23]},
+ Fmaj7:{b:87.31, n:[220.00,261.63,329.63,349.23]},
+ Gm7:  {b:98.00, n:[233.08,293.66,349.23,392.00]},
+ C7:   {b:130.81,n:[196.00,233.08,261.63,329.63]},
+ E7:   {b:82.41, n:[207.65,246.94,293.66,329.63]},
+ A7:   {b:110.00,n:[220.00,277.18,329.63,392.00]}
+};
+const JAZZ=[
+ ["Cmaj7","Am7","Dm7","G7"],
+ ["Fmaj7","Gm7","C7","Fmaj7"],
+ ["Am7","Dm7","E7","Am7"],
+ ["Dm7","G7","Cmaj7","A7"]
+];
+let jazzNextBar=0,jazzBar=0,jazzProg=0;
+function jazzLoop(){
+ if(!musicOn)return;
+ const BEAT=0.6,BAR=BEAT*4,LOOK=1.5;
+ while(jazzNextBar<AC.currentTime+LOOK){
+   const prog=JAZZ[jazzProg], key=prog[jazzBar%4], ch=JCHORDS[key], t0=jazzNextBar;
+   ch.n.forEach((f,i)=>rhodes(f,t0+0.005*i,1.9,0.085));            // acord a temps 1
+   ch.n.forEach((f,i)=>rhodes(f,t0+2.5*BEAT+0.005*i,1.0,0.045));   // toc swing
+   upbass(ch.b,t0,BEAT*1.2,0.17);
+   upbass(ch.b*1.498,t0+2*BEAT,BEAT*1.0,0.13);
+   for(let bt=0;bt<4;bt++){ jbrush(t0+bt*BEAT,0.016,5200); jbrush(t0+bt*BEAT+BEAT*0.66,0.011,6200); } // ride swing
+   jkick(t0,0.09); jkick(t0+2*BEAT,0.05);
+   jbrush(t0+BEAT,0.028,3400); jbrush(t0+3*BEAT,0.028,3400);       // backbeat 2 i 4
+   if(Math.random()<0.33){ const mn=ch.n[1+Math.floor(Math.random()*2)]*2; jlead(mn,t0+(Math.random()<.5?0:2*BEAT),BEAT*1.4,0.05); }
+   jazzNextBar+=BAR; jazzBar++;
+   if(jazzBar%4===0&&Math.random()<0.5) jazzProg=(jazzProg+1+Math.floor(Math.random()*(JAZZ.length-1)))%JAZZ.length; // canvia de cançó
+ }
+}
 function ensureAC(){
  if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();
    masterGain=AC.createGain();masterGain.gain.value=0.5;
@@ -1717,15 +1802,29 @@ function gavina(){
  }catch(e){}
 }
 
-function setMusic(mode){ // "sea" | "gtr" | "off"
+/* ---------------- Música de fons: fitxer(s) MP3 reals (sense copyright) ----------------
+   Posa es teus temes a sa carpeta music/ des repositori (mira es README).
+   Es carreguen NOMÉS quan poses sa música (preload="none"), així sa pàgina
+   no s'alenteix. Amb 1 fitxer, fa bucle; amb 2, els va alternant. */
+const BGM_TRACKS=["music/jazz1.mp3","music/jazz2.mp3"]; // 1 o 2; si no hi són, silenci
+let bgmEl=null, bgmIdx=0;
+function bgmStart(){
+ if(!bgmEl){
+   bgmEl=new Audio(); bgmEl.preload="none"; bgmEl.volume=0.55;
+   bgmEl.loop=(BGM_TRACKS.length===1);
+   bgmEl.addEventListener("ended",()=>{ if(BGM_TRACKS.length>1){ bgmIdx=(bgmIdx+1)%BGM_TRACKS.length; bgmEl.src=BGM_TRACKS[bgmIdx]; bgmEl.play().catch(()=>{}); } });
+ }
+ if(!bgmEl.src) bgmEl.src=BGM_TRACKS[bgmIdx];
+ bgmEl.play().catch(()=>{});
+}
+function bgmStop(){ if(bgmEl) bgmEl.pause(); }
+
+function setMusic(mode){ // "music" | "off"
  G.musicMode=mode;
- $("#btnMusic").textContent=mode==="sea"?"🌊":mode==="gtr"?"🎸":"🔇";
+ $("#btnMusic").textContent=mode==="music"?"🎵":"🔇";
  $("#btnMusic").style.opacity=mode==="off"?.45:1;
- if(mode==="gtr"){
-   ensureAC();musicOn=true;nextChordTime=Math.max(nextChordTime,AC.currentTime+0.1);
-   if(!musicTimer)musicTimer=setInterval(musicLoop,200);
- }else{musicOn=false}
- if(mode==="sea")startSea();else stopSea();
+ musicOn=false; stopSea(); // res de sons sintetitzats de fons
+ if(mode==="music") bgmStart(); else bgmStop();
 }
 
 /* ---------------- Sons de cartes (sintetitzats, com tot) ---------------- */
@@ -1761,8 +1860,7 @@ function applyLang(){
  $("#lblDoses").textContent=t("doses");
  $("#btnDosesSi").textContent=t("dosesSi");$("#btnDosesNo").textContent=t("dosesNo");
  $("#lblMusic").textContent=t("music");
- $("#btnMusicSea").textContent=t("musicSea");
- $("#btnMusicGtr").textContent=t("musicGtr");
+ $("#btnMusicOn").textContent=t("musicOn");
  $("#btnMusicOff").textContent=t("musicOff");
  $("#cfgNote").textContent=t("note");
  $("#btnStart").textContent=t("start");
@@ -1781,11 +1879,11 @@ segInit("#segMusic",v=>setMusic(v));
 $("#btnStart").onclick=()=>{
  G.online=null; NET.cleanup(); // partida local: res d'online
  $("#scrConfig").classList.add("hidden");$("#scrGame").classList.remove("hidden");
- setMusic(G.musicMode||"sea");
+ setMusic(G.musicMode||"music");
  startMatch();
 };
 $("#btnMusic").onclick=()=>{ // cicla: sa cala -> jota -> silenci
- setMusic(G.musicMode==="sea"?"gtr":G.musicMode==="gtr"?"off":"sea");
+ setMusic(G.musicMode==="music"?"off":"music");
 };
 $("#btnHelp").onclick=showSenyesHelp;
 $("#btnSenya").onclick=playerSenya;
@@ -1883,7 +1981,7 @@ const NET={
    else if(m.t==="chat"){ addChatMsg(m.name||"", m.text||"", "them"); }
    else if(m.t==="wave"){ toast("👋 "+(m.name||"")+" "+t_("et saluda!","¡te saluda!"),2200); }
    else if(m.t==="go"){ // s'amfitrió ha començat: passa a sa taula i espera snapshots
-     G.online="client"; setMusic(G.musicMode||"sea");
+     G.online="client"; setMusic(G.musicMode||"music");
      $("#scrLobby").classList.add("hidden"); $("#scrConfig").classList.add("hidden"); $("#scrGame").classList.remove("hidden");
      $("#msgLine").textContent=t_("Comença sa partida!","¡Empieza la partida!");
    }
@@ -2008,7 +2106,7 @@ $("#lobStart").onclick=()=>{
   NET.send({t:"seat",seat:NET.friendSeat}); NET.send({t:"go"});
   G.online="host"; NET.mySeat=0;
   $("#scrLobby").classList.add("hidden"); $("#scrConfig").classList.add("hidden"); $("#scrGame").classList.remove("hidden");
-  setMusic(G.musicMode||"sea");
+  setMusic(G.musicMode||"music");
   startMatch();
   if(NET.friendSeat){ NAMES[NET.friendSeat]=NET.friendName||"Amic"; $("#pl"+NET.friendSeat+" .pname").textContent=NAMES[NET.friendSeat]; pushNet(); }
 };

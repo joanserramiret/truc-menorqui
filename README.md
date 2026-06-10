@@ -16,7 +16,7 @@ Es truc és es joc de cartes de tota sa vida a Menorca: dues parelles, 30 cartes
 - Envit, truc, retruc, val nou, cama, me'n vaig... i sa senya d'envit an es company
 - Ses senyes: sa companya et mostra ses cartes amb un flaix de 0,4 segons ⚡
 - Bilingüe: menorquí (amb s'article salat, com toca) i castellà
-- Música: guitarreta sintetitzada o ses cançons de Joana Pons (YouTube)
+- Música de fons: temes MP3 reals (smooth jazz/lounge lliures de drets) que poses a sa carpeta `music/` — mira `music/LLEGEIX-ME.txt`
 - Estil de vinyeta de premsa: es bar menorquí, sa cala, es gin Xoriguer damunt sa taula
 
 ## Crèdits i llicències

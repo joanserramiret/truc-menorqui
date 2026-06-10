@@ -1,0 +1,31 @@
+MÚSICA DE FONS — com posar-hi es teus temes
+============================================
+
+Es joc reprodueix fitxers MP3 reals des d'aquesta carpeta (res sintetitzat).
+Es carreguen NOMÉS quan poses sa música des de dins es joc, així sa pàgina
+no s'alenteix en obrir-se.
+
+QUÈ HAS DE FER
+--------------
+1. Baixa 1 (o 2) temes de smooth jazz / lounge LLIURES DE COPYRIGHT.
+2. Posa'ls en aquesta carpeta amb aquests noms EXACTES:
+       music/jazz1.mp3      (obligatori)
+       music/jazz2.mp3      (opcional, segon tema)
+3. Fes commit + push. Au, ja sona.
+
+Amb 1 fitxer, fa bucle. Amb 2, els va alternant.
+
+D'ON BAIXAR-LOS (gratis i sense problemes de drets)
+---------------------------------------------------
+- Pixabay Music  -> https://pixabay.com/music/   (cerca "smooth jazz" o "lounge";
+                    llicència Pixabay: gratis, ús comercial, SENSE atribució)
+- YouTube Audio Library -> https://studio.youtube.com  (pestanya "Audio Library";
+                    filtra per "Jazz" i per "No attribution required")
+- Bensound -> https://www.bensound.com  (temes "jazzy"/"the lounge"; gratis amb
+                    atribució — si l'uses, posa es crèdit an es README principal)
+
+CANVIAR ES NOMS O AFEGIR-NE MÉS
+-------------------------------
+Si vols altres noms o més temes, edita sa línia BGM_TRACKS dins
+truc_menorqui.html:
+    const BGM_TRACKS=["music/jazz1.mp3","music/jazz2.mp3"];
