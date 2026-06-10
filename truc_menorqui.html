@@ -403,7 +403,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:60;
     <div class="miniNote" id="cfgNote">Tu i na Maria contra en Toni i en Biel. A dues cames de 24!</div>
     <button class="bigStart" id="btnStart">JUGAM? 🃏</button>
     <button class="bigStart" id="btnOnline" style="background:var(--wood2);font-size:18px;color:#fff">🌐 Jugar online</button>
-    <div class="miniNote">v2.0 · Cartes: Basquetteur — Wikimedia Commons, CC BY-SA 3.0</div>
+    <div class="miniNote">v2.0 · Cartes: Basquetteur (CC BY-SA 3.0) · Música: Kevin MacLeod — incompetech.com (CC BY 4.0)</div>
   </div>
   <div style="width:90px" id="cfgGin"></div>
 </div>
@@ -1632,126 +1632,8 @@ function pluck(freq,when,vol){
    src.start(when);
  });
 }
-/* Jota de taverna (composició pròpia amb aire de jota menorquina):
-   rasgueig + baix + melodia, estructura A-A-B-B que va rodant */
-const JCH={ // acords [baix, cordes...]
- C:[130.81,196.00,261.63,329.63],
- G7:[ 98.00,196.00,246.94,293.66],
- F:[174.61,220.00,261.63,349.23]
-};
-const JOTA_A=[
- {c:"C", m:[523.25,587.33,659.25,659.25,587.33,523.25]},
- {c:"G7",m:[493.88,523.25,587.33,587.33,523.25,493.88]},
- {c:"G7",m:[587.33,523.25,493.88,440.00,493.88,392.00]},
- {c:"C", m:[659.25,587.33,523.25,523.25,392.00,523.25]},
-];
-const JOTA_B=[
- {c:"F", m:[523.25,587.33,659.25,698.46,659.25,587.33]},
- {c:"C", m:[659.25,523.25,392.00,440.00,493.88,523.25]},
- {c:"G7",m:[587.33,493.88,440.00,392.00,440.00,493.88]},
- {c:"C", m:[523.25,659.25,523.25,493.88,523.25,523.25]},
-];
-const TUNE=[...JOTA_A,...JOTA_A,...JOTA_B,...JOTA_B];
-let nextChordTime=0,chordIdx=0;
-function musicLoop(){
- if(!musicOn)return;
- const NOTE=0.22,LOOKAHEAD=0.8;
- while(nextChordTime<AC.currentTime+LOOKAHEAD){
-   const bar=TUNE[chordIdx%TUNE.length];
-   const ch=JCH[bar.c];
-   pluck(ch[0],nextChordTime,0.26);                    // baix
-   ch.slice(1).forEach((f,k)=>pluck(f,nextChordTime+0.015*(k+1),0.085)); // rasgueig
-   ch.slice(1).forEach((f,k)=>pluck(f,nextChordTime+3*NOTE+0.012*(k+1),0.05)); // contratemps
-   bar.m.forEach((f,k)=>pluck(f,nextChordTime+k*NOTE,0.14)); // melodia
-   nextChordTime+=6*NOTE;chordIdx++;
- }
-}
-/* ====================================================================
-   MÚSICA — Smooth jazz (tot sintetitzat, sense cap obra de tercers)
-   Piano Rhodes + contrabaix + escombretes + melodia, amb progressions
-   que van rodant (sona com a diverses cançons). Reverb suau.
-   ==================================================================== */
-let JNOISE=null;
-function noiseBuf2(){ if(JNOISE)return JNOISE;
- const sr=AC.sampleRate,b=AC.createBuffer(1,Math.floor(sr*0.4),sr),d=b.getChannelData(0);
- for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1; JNOISE=b;return b; }
-let jazzBus=null;
-function jazzReverb(){ if(jazzBus)return jazzBus;
- const d=AC.createDelay(0.6); d.delayTime.value=0.16;
- const fb=AC.createGain(); fb.gain.value=0.30;
- const lp=AC.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=2600;
- const out=AC.createGain(); out.gain.value=0.5;
- d.connect(lp); lp.connect(fb); fb.connect(d); lp.connect(out); out.connect(masterGain);
- jazzBus={in:d}; return jazzBus; }
-function jEnv(when,dur,peak,atk){ const g=AC.createGain(); const a=atk||0.01;
- g.gain.setValueAtTime(0.0001,when); g.gain.exponentialRampToValueAtTime(peak,when+a);
- g.gain.exponentialRampToValueAtTime(0.0001,when+dur); return g; }
-function rhodes(freq,when,dur,vol){ // piano elèctric Rhodes (FM suau amb campaneta)
- const car=AC.createOscillator(); car.type="sine"; car.frequency.value=freq;
- const mod=AC.createOscillator(); mod.type="sine"; mod.frequency.value=freq*2;
- const mg=AC.createGain(); mg.gain.setValueAtTime(freq*1.1,when); mg.gain.exponentialRampToValueAtTime(freq*0.04,when+0.22);
- mod.connect(mg); mg.connect(car.frequency);
- const g=jEnv(when,dur,vol,0.006);
- const lp=AC.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=2400;
- car.connect(g); g.connect(lp); lp.connect(masterGain);
- const rev=AC.createGain(); rev.gain.value=vol*0.4; lp.connect(rev); rev.connect(jazzReverb().in);
- car.start(when); mod.start(when); car.stop(when+dur+0.05); mod.stop(when+dur+0.05); }
-function upbass(freq,when,dur,vol){ // contrabaix
- const o=AC.createOscillator(); o.type="triangle"; o.frequency.value=freq;
- const g=AC.createGain(); g.gain.setValueAtTime(0.0001,when); g.gain.exponentialRampToValueAtTime(vol,when+0.02); g.gain.exponentialRampToValueAtTime(0.0001,when+dur);
- const lp=AC.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=300;
- o.connect(g); g.connect(lp); lp.connect(masterGain); o.start(when); o.stop(when+dur+0.05); }
-function jbrush(when,vol,hz){ // escombreta de bateria
- const s=AC.createBufferSource(); s.buffer=noiseBuf2();
- const hp=AC.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=hz||5000;
- const g=AC.createGain(); g.gain.setValueAtTime(vol,when); g.gain.exponentialRampToValueAtTime(0.0001,when+0.13);
- s.connect(hp); hp.connect(g); g.connect(masterGain); s.start(when); s.stop(when+0.25); }
-function jkick(when,vol){
- const o=AC.createOscillator(); o.type="sine"; o.frequency.setValueAtTime(105,when); o.frequency.exponentialRampToValueAtTime(45,when+0.12);
- const g=AC.createGain(); g.gain.setValueAtTime(vol,when); g.gain.exponentialRampToValueAtTime(0.0001,when+0.16);
- o.connect(g); g.connect(masterGain); o.start(when); o.stop(when+0.2); }
-function jlead(freq,when,dur,vol){ // melodia tipus sordina
- const o=AC.createOscillator(); o.type="triangle"; o.frequency.value=freq;
- const g=jEnv(when,dur,vol,0.05);
- const lp=AC.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value=1500;
- o.connect(g); g.connect(lp); lp.connect(masterGain);
- const rev=AC.createGain(); rev.gain.value=vol*0.6; lp.connect(rev); rev.connect(jazzReverb().in);
- o.start(when); o.stop(when+dur+0.05); }
-const JCHORDS={
- Cmaj7:{b:130.81,n:[196.00,246.94,293.66,329.63]},
- Am7:  {b:110.00,n:[220.00,261.63,329.63,392.00]},
- Dm7:  {b:146.83,n:[220.00,261.63,293.66,349.23]},
- G7:   {b:98.00, n:[196.00,246.94,293.66,349.23]},
- Fmaj7:{b:87.31, n:[220.00,261.63,329.63,349.23]},
- Gm7:  {b:98.00, n:[233.08,293.66,349.23,392.00]},
- C7:   {b:130.81,n:[196.00,233.08,261.63,329.63]},
- E7:   {b:82.41, n:[207.65,246.94,293.66,329.63]},
- A7:   {b:110.00,n:[220.00,277.18,329.63,392.00]}
-};
-const JAZZ=[
- ["Cmaj7","Am7","Dm7","G7"],
- ["Fmaj7","Gm7","C7","Fmaj7"],
- ["Am7","Dm7","E7","Am7"],
- ["Dm7","G7","Cmaj7","A7"]
-];
-let jazzNextBar=0,jazzBar=0,jazzProg=0;
-function jazzLoop(){
- if(!musicOn)return;
- const BEAT=0.6,BAR=BEAT*4,LOOK=1.5;
- while(jazzNextBar<AC.currentTime+LOOK){
-   const prog=JAZZ[jazzProg], key=prog[jazzBar%4], ch=JCHORDS[key], t0=jazzNextBar;
-   ch.n.forEach((f,i)=>rhodes(f,t0+0.005*i,1.9,0.085));            // acord a temps 1
-   ch.n.forEach((f,i)=>rhodes(f,t0+2.5*BEAT+0.005*i,1.0,0.045));   // toc swing
-   upbass(ch.b,t0,BEAT*1.2,0.17);
-   upbass(ch.b*1.498,t0+2*BEAT,BEAT*1.0,0.13);
-   for(let bt=0;bt<4;bt++){ jbrush(t0+bt*BEAT,0.016,5200); jbrush(t0+bt*BEAT+BEAT*0.66,0.011,6200); } // ride swing
-   jkick(t0,0.09); jkick(t0+2*BEAT,0.05);
-   jbrush(t0+BEAT,0.028,3400); jbrush(t0+3*BEAT,0.028,3400);       // backbeat 2 i 4
-   if(Math.random()<0.33){ const mn=ch.n[1+Math.floor(Math.random()*2)]*2; jlead(mn,t0+(Math.random()<.5?0:2*BEAT),BEAT*1.4,0.05); }
-   jazzNextBar+=BAR; jazzBar++;
-   if(jazzBar%4===0&&Math.random()<0.5) jazzProg=(jazzProg+1+Math.floor(Math.random()*(JAZZ.length-1)))%JAZZ.length; // canvia de cançó
- }
-}
+/* (Sa música de fons antiga, sintetitzada —jota, jazz i mar— s'ha llevat:
+   ara s'usa un reproductor MP3 real. Es manté pluck() per an es efectes.) */
 function ensureAC(){
  if(!AC){AC=new (window.AudioContext||window.webkitAudioContext)();
    masterGain=AC.createGain();masterGain.gain.value=0.5;
@@ -1759,54 +1641,17 @@ function ensureAC(){
    masterGain.connect(lp);lp.connect(AC.destination);}
  AC.resume();
 }
-/* ---------------- Ambient de sa cala: ones i qualque gavina ---------------- */
-let seaNodes=null,gullTimer=null,BROWN=null;
-function brownBuf(){
- if(BROWN)return BROWN;
- const sr=AC.sampleRate,b=AC.createBuffer(1,sr*4,sr),d=b.getChannelData(0);
- let last=0;
- for(let i=0;i<d.length;i++){last=(last+0.02*(Math.random()*2-1))/1.02;d[i]=last*3.5}
- BROWN=b;return b;
-}
-function startSea(){
- ensureAC();if(seaNodes)return;
- const src=AC.createBufferSource();src.buffer=brownBuf();src.loop=true;
- const lp=AC.createBiquadFilter();lp.type="lowpass";lp.frequency.value=420;
- const g=AC.createGain();g.gain.value=0.06;
- const lfo=AC.createOscillator();lfo.frequency.value=0.08; // ones que van i vénen
- const lfoG=AC.createGain();lfoG.gain.value=0.04;
- lfo.connect(lfoG);lfoG.connect(g.gain);
- src.connect(lp);lp.connect(g);g.connect(masterGain);
- src.start();lfo.start();
- seaNodes={src,lfo};
- gullTimer=setInterval(()=>{if(Math.random()<.45)gavina()},9000);
-}
-function stopSea(){
- if(seaNodes){try{seaNodes.src.stop();seaNodes.lfo.stop()}catch(e){}seaNodes=null}
- if(gullTimer){clearInterval(gullTimer);gullTimer=null}
-}
-function gavina(){
- try{ensureAC();
-  const crit=(t0)=>{
-   const o=AC.createOscillator(),g=AC.createGain();o.type="sine";
-   o.frequency.setValueAtTime(1250,t0);
-   o.frequency.exponentialRampToValueAtTime(880,t0+0.16);
-   o.frequency.exponentialRampToValueAtTime(1120,t0+0.28);
-   g.gain.setValueAtTime(0.0001,t0);
-   g.gain.exponentialRampToValueAtTime(0.04,t0+0.05);
-   g.gain.exponentialRampToValueAtTime(0.0001,t0+0.36);
-   o.connect(g);g.connect(masterGain);o.start(t0);o.stop(t0+0.42);
-  };
-  const t=AC.currentTime+0.1;
-  crit(t);if(Math.random()<.6)crit(t+0.45);
- }catch(e){}
-}
-
 /* ---------------- Música de fons: fitxer(s) MP3 reals (sense copyright) ----------------
    Posa es teus temes a sa carpeta music/ des repositori (mira es README).
    Es carreguen NOMÉS quan poses sa música (preload="none"), així sa pàgina
    no s'alenteix. Amb 1 fitxer, fa bucle; amb 2, els va alternant. */
-const BGM_TRACKS=["music/jazz1.mp3","music/jazz2.mp3"]; // 1 o 2; si no hi són, silenci
+/* Smooth jazz / lounge de Kevin MacLeod (CC BY 4.0) — crèdit a sa pantalla d'inici
+   i an es README. Es retransmeten d'Internet Archive (no pesen a sa pàgina).
+   Si vols es teus propis temes, posa'ls a music/ i canvia aquestes línies. */
+const BGM_TRACKS=[
+ "https://archive.org/download/Kevin-MacLeod_Teh-Jazzes_2017_FullAlbum/Teh%20Jazzes/Kevin%20MacLeod%20-%2001%20-%20Backbay%20Lounge.mp3",
+ "https://archive.org/download/Kevin-MacLeod_Teh-Jazzes_2017_FullAlbum/Teh%20Jazzes/Kevin%20MacLeod%20-%2003%20-%20Apero%20Hour.mp3"
+];
 let bgmEl=null, bgmIdx=0;
 function bgmStart(){
  if(!bgmEl){
@@ -1823,7 +1668,6 @@ function setMusic(mode){ // "music" | "off"
  G.musicMode=mode;
  $("#btnMusic").textContent=mode==="music"?"🎵":"🔇";
  $("#btnMusic").style.opacity=mode==="off"?.45:1;
- musicOn=false; stopSea(); // res de sons sintetitzats de fons
  if(mode==="music") bgmStart(); else bgmStop();
 }
 
