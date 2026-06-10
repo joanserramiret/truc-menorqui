@@ -1899,6 +1899,7 @@ function pushNet(){
  const k=NET.friendSeat;
  const nm=NAMES.slice(); nm[0]=NET.myName||"Amfitrió";
  NET.send({t:"snap", s:{
+   mySeat:k,
    counts:G.hands.map(h=>h.length),
    hand:(G.hands[k]||[]).slice(),
    played:G.played.slice(),
@@ -1914,6 +1915,7 @@ function pushNet(){
 }
 function applySnap(s){
  if(G.online!=="host")G.online="client";
+ if(typeof s.mySeat==="number")NET.mySeat=s.mySeat; // es seient real ve dins es snapshot (per si es va perdre al lobby)
  const k=NET.mySeat||0;
  const rot=a=>{const r=[];for(let d=0;d<4;d++)r[d]=a?a[(d+k)%4]:null;return r};
  if($("#scrGame").classList.contains("hidden")){
