@@ -1247,11 +1247,14 @@ function nextTurn(){
    setTimeout(()=>aiTurn(G.turn),1500+Math.random()*1100);}
 }
 function playerPlays(i){
- if(!(G.inHand&&G.turn===0&&!G.truc.pending&&!G.envit.pending)){
-   if(G.online==="client")toast("⛔ ara no (torn "+G.turn+", pend "+(G.truc.pending||G.envit.pending)+")",1800);
+ if(!(G.inHand&&G.turn===0&&!G.truc.pending&&!G.envit.pending))return;
+ if(G.online==="client"){
+   NET.send({t:"do",a:"play",idx:i});
+   // feedback immediat: lleva sa carta de sa mà i espera s'estat des host
+   if(i>=0&&i<G.hands[0].length)G.hands[0].splice(i,1);
+   renderHand(false); $("#actions").innerHTML=""; setMsg(t_("Esperant...","Esperando..."));
    return;
  }
- if(G.online==="client"){ toast("⟶ tir carta "+i,1000); NET.send({t:"do",a:"play",idx:i}); return; }
  playCard(0,i);
 }
 function playCard(seat,idx){
@@ -1839,7 +1842,16 @@ const NET={
  }
 };
 /* ---- Fase 2: snapshot host -> client (mirall de sa taula) ---- */
+/* agrupa ets enviaments: com a molt un snapshot cada ~120 ms (sempre es darrer
+   estat), perquè es canal no es saturi i es client no es quedi enrere */
+let _netTimer=null,_netLast=0;
 function pushNet(){
+ if(G.online!=="host"||!NET.conn||!NET.conn.open)return;
+ const now=Date.now(), gap=120;
+ if(now-_netLast>=gap){ _netLast=now; _sendSnap(); }
+ else if(!_netTimer){ _netTimer=setTimeout(()=>{ _netTimer=null; _netLast=Date.now(); _sendSnap(); }, gap-(now-_netLast)); }
+}
+function _sendSnap(){
  if(G.online!=="host"||!NET.conn||!NET.conn.open)return;
  const k=NET.friendSeat;
  const nm=NAMES.slice(); nm[0]=NET.myName||"Amfitrió";
@@ -1889,14 +1901,12 @@ function applySnap(s){
  if(G.online==="client" && G.inHand && G.turn===0 && !G.truc.pending && !G.envit.pending && !G.promptActive){
    renderHand(true); renderActions();
  }
- if(G.online==="client") $("#msgLine").textContent += "  · DBG t"+G.turn+(G.turn===0&&G.inHand?" (ET TOCA)":"")+" p"+(G.truc.pending||G.envit.pending?1:0)+" pr"+(G.promptActive?1:0);
 }
 
 /* ---- Fase 3: s'amic juga i aposta de veritat ---- */
 // HOST: aplica accions que arriben des client
 function hostApplyRemote(m){
  if(G.online!=="host")return; const fs=NET.friendSeat;
- toast("⟵ "+m.a+" (torn "+G.turn+" / amic "+fs+")",1800);
  if(m.a==="play"){ if(G.inHand&&G.turn===fs&&!G.truc.pending&&!G.envit.pending){ const i=m.idx; if(i>=0&&i<G.hands[fs].length)playCard(fs,i); } }
  else if(m.a==="ptruc"){ if(G.inHand&&G.turn===fs&&!G.truc.pending&&!G.envit.pending){ const lvl=G.truc.level+1; const cr=G.truc.canRaise; if(lvl<TRUC_CHAIN.length&&(cr===null||cr===teamOf(fs)))proposeTruc(teamOf(fs),fs,lvl); } }
  else if(m.a==="penvit"){ if(G.inHand&&G.turn===fs&&G.baza===1&&G.envit.open&&G.envit.level<0&&!G.truc.pending&&!G.envit.pending)proposeEnvit(teamOf(fs),fs,Math.max(0,G.envit.level+1)); }
